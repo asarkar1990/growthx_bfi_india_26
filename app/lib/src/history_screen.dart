@@ -110,18 +110,25 @@ class _SummaryCard extends StatelessWidget {
         ),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFC4B5FD),
+            ),
             onPressed: () => Navigator.of(dialogCtx).pop(),
             child: const Text('Cancel'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF7E2228),
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
             ),
             onPressed: () {
               Navigator.of(dialogCtx).pop();
               context.read<CarePlanCubit>().deleteSummary(summary.id);
             },
-            child: const Text('Delete'),
+            child: const Text(
+              'Delete',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
@@ -277,11 +284,19 @@ class _SummaryCard extends StatelessWidget {
                 if (!isActive) ...[
                   OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 38),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 14,
                         vertical: 8,
                       ),
-                      side: const BorderSide(color: Color(0xFF45366E)),
+                      foregroundColor: AppTheme.lavender,
+                      side: const BorderSide(
+                        color: Color(0xFF5B458E),
+                        width: 1.2,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     onPressed: () {
                       context.read<CarePlanCubit>().setActiveSummary(
@@ -291,31 +306,49 @@ class _SummaryCard extends StatelessWidget {
                     icon: const Icon(
                       Icons.radio_button_checked_rounded,
                       size: 16,
+                      color: AppTheme.lavender,
                     ),
                     label: const Text(
                       'Set as Active',
-                      style: TextStyle(fontSize: 12.5),
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
                 ],
                 FilledButton.icon(
                   style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 38),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 14,
                       vertical: 8,
                     ),
                     backgroundColor: isActive
-                        ? const Color(0xFF5A3FA0)
-                        : const Color(0xFF2F244E),
+                        ? const Color(0xFF7C3AED)
+                        : const Color(0xFF382364),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                   onPressed: () {
                     context.read<CarePlanCubit>().setActiveSummary(summary.id);
                   },
-                  icon: const Icon(Icons.visibility_outlined, size: 16),
+                  icon: const Icon(
+                    Icons.visibility_outlined,
+                    size: 16,
+                    color: Colors.white,
+                  ),
                   label: const Text(
                     'View Plan',
-                    style: TextStyle(fontSize: 12.5),
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
                 const Spacer(),
@@ -323,7 +356,7 @@ class _SummaryCard extends StatelessWidget {
                   tooltip: 'Delete',
                   icon: const Icon(
                     Icons.delete_outline_rounded,
-                    color: Color(0xFFB4626B),
+                    color: Color(0xFFE57373),
                     size: 20,
                   ),
                   onPressed: () => _confirmDelete(context),
