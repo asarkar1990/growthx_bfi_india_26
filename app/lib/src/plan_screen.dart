@@ -181,128 +181,149 @@ class _NextActionPage extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                'NEXT UP',
-                style: TextStyle(
-                  color: accentColor,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.4,
+      child: SingleChildScrollView(
+        physics: const ClampingScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'NEXT UP',
+                  style: TextStyle(
+                    color: accentColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.4,
+                  ),
                 ),
-              ),
-              const Spacer(),
-              if (currentAction != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 9,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: badgeColor,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFF297E78)),
-                  ),
-                  child: Text(
-                    'MEDICATION',
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: .7,
+                const Spacer(),
+                if (currentAction != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: badgeColor,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFF297E78)),
+                    ),
+                    child: const Text(
+                      'MEDICATION',
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: .7,
+                      ),
                     ),
                   ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            if (currentAction == null) ...[
+              const Row(
+                children: [
+                  Icon(
+                    Icons.check_circle_outline_rounded,
+                    color: Color(0xFF86EFAC),
+                    size: 26,
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'No upcoming scheduled actions',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Your current schedule has finished. Open the full plan to review instructions or warning signs.',
+                style: TextStyle(
+                  color: Color(0xFFA7D8D3),
+                  height: 1.35,
+                  fontSize: 13,
                 ),
+              ),
+            ] else ...[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: badgeColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.medication_rounded,
+                      color: accentColor,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _nextActionDateLabel(
+                            currentAction.when,
+                            includeTime: true,
+                          ),
+                          style: TextStyle(
+                            color: accentColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          currentAction.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                currentAction.subtitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xFFE0F7F4),
+                  fontSize: 13,
+                  height: 1.35,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                '${_timingName(currentAction.timing!)} uses a suggested schedule time. Follow instructions from your care team.',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Color(0xFFA7D8D3),
+                  fontSize: 11,
+                  height: 1.3,
+                ),
+              ),
             ],
-          ),
-          const SizedBox(height: 14),
-          if (currentAction == null) ...[
-            const Row(
-              children: [
-                Icon(
-                  Icons.check_circle_outline_rounded,
-                  color: Color(0xFF86EFAC),
-                  size: 30,
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'No upcoming scheduled actions',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Your current schedule has finished. Open the full plan to review instructions or warning signs.',
-              style: TextStyle(color: Color(0xFFA7D8D3), height: 1.4),
-            ),
-          ] else ...[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: badgeColor,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(Icons.medication_rounded, color: accentColor),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _nextActionDateLabel(
-                          currentAction.when,
-                          includeTime: true,
-                        ),
-                        style: TextStyle(
-                          color: accentColor,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        currentAction.title,
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              currentAction.subtitle,
-              style: const TextStyle(
-                color: Color(0xFFE0F7F4),
-                fontSize: 14,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${_timingName(currentAction.timing!)} uses a suggested schedule time. Follow the exact instructions from your care team.',
-              style: const TextStyle(
-                color: Color(0xFFA7D8D3),
-                fontSize: 11.5,
-                height: 1.35,
-              ),
-            ),
           ],
-        ],
+        ),
       ),
     );
   }

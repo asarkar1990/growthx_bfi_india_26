@@ -6,7 +6,7 @@ from time import monotonic
 from typing import Literal
 
 from dotenv import find_dotenv, load_dotenv
-from fastapi import FastAPI, File, Form, UploadFile
+from fastapi import FastAPI, File, Form, UploadFile, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -120,4 +120,36 @@ async def create_plan(
         "plan": plan.model_dump(mode="json"),
         "meta": {"isSample": False, "isFallback": False, "processingTimeMs": int((monotonic() - started) * 1000)},
     }
+
+
+@app.websocket("/ws/voice-chat")
+@app.websocket("/ws/voice-chat/{summary_id}")
+async def websocket_voice_chat(websocket: WebSocket, summary_id: str = "active"):
+    await websocket.accept()
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        await websocket.send_json({
+            "type": "error",
+            "code": "MISSING_API_KEY",
+            "message": "Gemini API key is not configured on the backend.",
+        })
+        await websocket.close()
+        return
+
+    # Receive initial plan context payload from client if available, or default to fallback
+    plan_data = deepcopy(FALLBACK_PLAN)
+    try:
+        from app.services.voice_service import stream_gemini_live_session
+        await stream_gemini_live_session(websocket, plan_data, api_key)
+    except Exception as e:
+        logger.error(f"Voice websocket session error: {e}", exc_info=True)
+        try:
+            await websocket.send_json({
+                "type": "error",
+                "code": "VOICE_SESSION_FAILED",
+                "message": str(e),
+            })
+            await websocket.close()
+        except Exception:
+            pass
 

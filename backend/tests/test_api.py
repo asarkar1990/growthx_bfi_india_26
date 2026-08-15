@@ -278,3 +278,25 @@ def test_live_gemini_extracts_synthetic_pdf():
 
     assert response.status_code == 200
     assert response.json()["meta"]["isSample"] is False
+
+
+def test_build_voice_system_prompt_includes_grounding_and_medications():
+    from app.services.voice_service import build_voice_system_prompt
+    from app.services.stub_response import FALLBACK_PLAN
+
+    prompt = build_voice_system_prompt(FALLBACK_PLAN)
+    assert "CarePath AI Voice Assistant" in prompt
+    assert "Mr. Arindam Sarkar" in prompt
+    assert "TAXIM-O" in prompt
+    assert "STRICT GROUNDING" in prompt
+    assert "EMERGENCY & WARNING SIGNS" in prompt
+
+
+def test_voice_websocket_missing_api_key_returns_error(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+
+    with client.websocket_connect("/ws/voice-chat/summary_123") as websocket:
+        data = websocket.receive_json()
+        assert data["type"] == "error"
+        assert data["code"] == "MISSING_API_KEY"

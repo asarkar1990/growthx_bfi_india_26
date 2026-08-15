@@ -7,6 +7,8 @@ import 'history_screen.dart';
 import 'models.dart';
 import 'plan_screen.dart';
 import 'theme.dart';
+import 'voice_chat_cubit.dart';
+import 'voice_chat_screen.dart';
 
 class UploadScreen extends StatelessWidget {
   const UploadScreen({super.key});
@@ -36,43 +38,133 @@ class UploadScreen extends StatelessWidget {
     return Scaffold(
       body: body,
       bottomNavigationBar: Container(
+        height: 74,
         decoration: const BoxDecoration(
           color: AppTheme.surface,
           border: Border(top: BorderSide(color: Color(0xFF281E40), width: 1)),
         ),
-        child: NavigationBar(
-          backgroundColor: Colors.transparent,
-          indicatorColor: const Color(0xFF3B2A64),
-          selectedIndex: state.currentTab,
-          onDestinationSelected: (index) {
-            cubit.switchTab(index);
-          },
-          destinations: [
-            NavigationDestination(
-              icon: const Icon(Icons.home_outlined),
-              selectedIcon: const Icon(
-                Icons.home_rounded,
-                color: AppTheme.lavender,
-              ),
-              label: state.plan != null ? 'Active Plan' : 'Home',
-            ),
-            NavigationDestination(
-              icon: Badge(
-                isLabelVisible: state.savedSummaries.isNotEmpty,
-                label: Text('${state.savedSummaries.length}'),
-                backgroundColor: AppTheme.lavender,
-                child: const Icon(Icons.folder_shared_outlined),
-              ),
-              selectedIcon: Badge(
-                isLabelVisible: state.savedSummaries.isNotEmpty,
-                label: Text('${state.savedSummaries.length}'),
-                backgroundColor: AppTheme.lavender,
-                child: const Icon(
-                  Icons.folder_shared_rounded,
-                  color: AppTheme.lavender,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            // Home / Active Plan Tab
+            Expanded(
+              child: InkWell(
+                onTap: () => cubit.switchTab(0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      state.currentTab == 0
+                          ? Icons.home_rounded
+                          : Icons.home_outlined,
+                      color: state.currentTab == 0
+                          ? AppTheme.lavender
+                          : const Color(0xFF9C93AC),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      state.plan != null ? 'Active Plan' : 'Home',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: state.currentTab == 0
+                            ? FontWeight.w800
+                            : FontWeight.w500,
+                        color: state.currentTab == 0
+                            ? Colors.white
+                            : const Color(0xFF9C93AC),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              label: 'Summaries',
+            ),
+
+            // Center Elevated Glowing Mic Button
+            GestureDetector(
+              onTap: () {
+                final activePlan = state.plan ?? state.pendingPlan;
+                if (activePlan != null) {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => BlocProvider(
+                        create: (_) => VoiceChatCubit(),
+                        child: VoiceChatScreen(plan: activePlan),
+                      ),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Please upload or activate a discharge plan first to chat.',
+                      ),
+                    ),
+                  );
+                }
+              },
+              child: Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF8B5CF6), Color(0xFF6366F1)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF8B5CF6).withValues(alpha: 0.45),
+                      blurRadius: 16,
+                      spreadRadius: 2,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.mic_rounded,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+            ),
+
+            // Summaries Tab
+            Expanded(
+              child: InkWell(
+                onTap: () => cubit.switchTab(1),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Badge(
+                      isLabelVisible: state.savedSummaries.isNotEmpty,
+                      label: Text('${state.savedSummaries.length}'),
+                      backgroundColor: AppTheme.lavender,
+                      child: Icon(
+                        state.currentTab == 1
+                            ? Icons.folder_shared_rounded
+                            : Icons.folder_shared_outlined,
+                        color: state.currentTab == 1
+                            ? AppTheme.lavender
+                            : const Color(0xFF9C93AC),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Summaries',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: state.currentTab == 1
+                            ? FontWeight.w800
+                            : FontWeight.w500,
+                        color: state.currentTab == 1
+                            ? Colors.white
+                            : const Color(0xFF9C93AC),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -677,13 +769,15 @@ class ConfirmationView extends StatelessWidget {
                   color: AppTheme.lavender,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  'MEDICATIONS TO CONFIRM ($medCount)',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: .8,
-                    color: AppTheme.lavender,
+                Expanded(
+                  child: Text(
+                    'MEDICATIONS TO CONFIRM ($medCount)',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: .8,
+                      color: AppTheme.lavender,
+                    ),
                   ),
                 ),
               ],
@@ -806,13 +900,15 @@ class ConfirmationView extends StatelessWidget {
                     color: AppTheme.lavender,
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    'FOLLOW-UPS & TESTS (${plan.followUps.length})',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: .8,
-                      color: AppTheme.lavender,
+                  Expanded(
+                    child: Text(
+                      'FOLLOW-UPS & TESTS (${plan.followUps.length})',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: .8,
+                        color: AppTheme.lavender,
+                      ),
                     ),
                   ),
                 ],
@@ -875,13 +971,15 @@ class ConfirmationView extends StatelessWidget {
                     color: Colors.amberAccent,
                   ),
                   SizedBox(width: 8),
-                  Text(
-                    'WARNING SIGNS & EMERGENCY ADVICE',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: .8,
-                      color: Colors.amberAccent,
+                  Expanded(
+                    child: Text(
+                      'WARNING SIGNS & EMERGENCY ADVICE',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: .8,
+                        color: Colors.amberAccent,
+                      ),
                     ),
                   ),
                 ],
@@ -1041,16 +1139,18 @@ class ProcessingView extends StatelessWidget {
                           : const Color(0xFF625A70),
                     ),
                     const SizedBox(width: 12),
-                    Text(
-                      labels[i],
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: i == stage
-                            ? FontWeight.w700
-                            : FontWeight.w400,
-                        color: i <= stage
-                            ? Colors.white
-                            : const Color(0xFF81798E),
+                    Expanded(
+                      child: Text(
+                        labels[i],
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: i == stage
+                              ? FontWeight.w700
+                              : FontWeight.w400,
+                          color: i <= stage
+                              ? Colors.white
+                              : const Color(0xFF81798E),
+                        ),
                       ),
                     ),
                   ],
