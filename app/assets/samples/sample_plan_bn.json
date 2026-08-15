@@ -1,0 +1,149 @@
+{
+  "schemaVersion": "1.0",
+  "documentType": "discharge_summary",
+  "outputLanguage": "bn",
+  "patient": {
+    "displayName": "Aarav",
+    "dischargeDate": "2026-08-15",
+    "hospital": "Swasthya Demo Hospital",
+    "department": "General Medicine",
+    "primaryConditionAsWritten": "Recovery after fever"
+  },
+  "overview": "ডিসচার্জ নির্দেশনা থেকে সাজানো সাত দিনের সুস্থতার পরিকল্পনা।",
+  "medications": [
+    {
+      "id": "med-paracetamol",
+      "name": "Paracetamol",
+      "dose": "500 mg",
+      "route": "oral",
+      "frequency": "once daily after breakfast",
+      "timing": [
+        "morning"
+      ],
+      "duration": "7 days",
+      "specialInstructions": "After food",
+      "simplifiedInstruction": "নির্দেশ অনুযায়ী সকালের খাবারের পরে একটি ট্যাবলেট নিন।",
+      "applicableDays": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "sourceEvidence": "Tab Paracetamol 500 mg orally once daily after breakfast for 7 days.",
+      "page": 1,
+      "confidence": "high",
+      "status": "confirmed_from_source",
+      "uncertaintyReason": null
+    },
+    {
+      "id": "med-cefixime",
+      "name": "Cefixime",
+      "dose": "200 mg",
+      "route": "oral",
+      "frequency": "at bedtime",
+      "timing": [
+        "bedtime"
+      ],
+      "duration": null,
+      "specialInstructions": null,
+      "simplifiedInstruction": "রাতে ট্যাবলেটটি নিন; কত দিন নিতে হবে নিশ্চিত করুন।",
+      "applicableDays": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "sourceEvidence": "Tab Cefixime 200 mg orally at bedtime. Duration: —",
+      "page": 1,
+      "confidence": "medium",
+      "status": "needs_confirmation",
+      "uncertaintyReason": "Duration is absent from the source."
+    }
+  ],
+  "careInstructions": [
+    {
+      "id": "care-walk",
+      "category": "activity",
+      "instruction": "Walk gently for 10 minutes with support daily.",
+      "simplifiedInstruction": "সহায়তা নিয়ে ধীরে ১০ মিনিট হাঁটুন।",
+      "timing": "afternoon",
+      "applicableDays": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "sourceEvidence": "Activity: gentle 10-minute supported walk daily.",
+      "page": 2,
+      "confidence": "high",
+      "status": "confirmed_from_source",
+      "uncertaintyReason": null
+    }
+  ],
+  "followUps": [
+    {
+      "id": "followup-1",
+      "type": "appointment",
+      "title": "General Medicine review",
+      "date": null,
+      "relativeTiming": "One week after discharge",
+      "locationOrDepartment": "General Medicine OPD",
+      "preparation": null,
+      "sourceEvidence": "Follow up in General Medicine OPD one week after discharge.",
+      "page": 2,
+      "confidence": "high",
+      "status": "confirmed_from_source",
+      "uncertaintyReason": null
+    }
+  ],
+  "warningSigns": [
+    {
+      "id": "warning-1",
+      "sign": "Fever above 102°F",
+      "action": "Contact the care team",
+      "sourceEvidence": "Seek help if fever rises above 102°F.",
+      "page": 2,
+      "confidence": "high",
+      "status": "confirmed_from_source",
+      "uncertaintyReason": null
+    },
+    {
+      "id": "warning-2",
+      "sign": "Difficulty breathing",
+      "action": "Seek urgent care",
+      "sourceEvidence": "Seek urgent care for difficulty breathing.",
+      "page": 2,
+      "confidence": "high",
+      "status": "confirmed_from_source",
+      "uncertaintyReason": null
+    }
+  ],
+  "confirmationIssues": [
+    {
+      "id": "issue-duration",
+      "severity": "important",
+      "title": "ওষুধের সময়কাল লেখা নেই",
+      "questionForCareTeam": "Cefixime কত দিন নিতে হবে?",
+      "sourceEvidence": "Tab Cefixime 200 mg orally at bedtime. Duration: —"
+    },
+    {
+      "id": "issue-illegible",
+      "severity": "advisory",
+      "title": "One handwritten line is unclear",
+      "questionForCareTeam": "Please ask the care team to explain the handwritten instruction.",
+      "sourceEvidence": "[illegible handwritten line]"
+    }
+  ],
+  "extractionWarnings": [
+    "One handwritten line was not converted into an instruction."
+  ]
+}

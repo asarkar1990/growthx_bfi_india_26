@@ -2,8 +2,8 @@
 
 **Product:** Post-discharge Day-by-Day Plan  
 **Artifact type:** Buildathon MVP specification  
-**Platform:** Flutter mobile application with a secure FastAPI backend  
-**Version:** 1.1  
+**Platform:** Flutter mobile-web demo with a FastAPI backend boundary
+**Version:** 1.2
 **Target build window:** 4 hours  
 **Primary audience:** AI coding agents and engineers implementing the demo
 
@@ -26,9 +26,11 @@ The product is an **instruction organiser**, not a diagnostic or treatment syste
 
 ### Platform decision: Flutter
 
-Flutter is selected because the product's useful experience extends beyond document upload: a personalised daily routine, accessible native UI, on-device preferences, and private local notifications. The live build targets Android to keep the four-hour scope credible. Flutter web and iOS are possible later but are not acceptance targets for this demo.
+The project currently pins **Flutter 3.44.9** through FVM and declares Dart `^3.13.0` in `app/pubspec.yaml`. It is mobile-web-first and intended to run in Chrome for the live demo; the repository also includes the generated Android host project. iOS is not configured or tested in this project.
 
-The trade-off is that document extraction still requires a secure backend. Flutter improves the patient experience but does not remove the need to keep AI credentials and sensitive processing outside the distributed app binary.
+At the time of this update, Flutter 3.44.9 ships Dart 3.12.2, so package resolution cannot succeed until the FVM Flutter version is upgraded to one that supplies Dart 3.13 or later (for example, the previously intended Flutter 3.47.0). This is a project configuration gap, not a supported demo capability.
+
+The app is a single dark-themed Material experience backed by bundled synthetic data, which makes the demo deterministic. A FastAPI service provides the validated server boundary for future real-document processing, but no multimodal provider is configured in the current demo.
 
 ## 2. Problem
 
@@ -56,7 +58,7 @@ This supports a strong three-minute demonstration while remaining achievable wit
 4. Preserve traceability between each generated instruction and the source text.
 5. Clearly flag uncertainty, missing details, and conflicting instructions.
 6. Provide a polished, personalised mobile experience suitable for a live demo.
-7. Let the user optionally schedule private, on-device reminders from confirmed plan items.
+7. Let the user review privacy-safe reminder candidates from confirmed plan items.
 
 ### Demo success criteria
 
@@ -94,19 +96,18 @@ A nurse or discharge coordinator who wants to provide patients with a more acces
 1. A caregiver receives a two-page discharge summary.
 2. They open CarePath India on a phone.
 3. They upload a photo or PDF and choose Bengali.
-4. The application extracts the document and presents a review screen.
+4. They choose the bundled synthetic demo document and create the plan.
 5. The caregiver generates a seven-day plan.
 6. The plan shows daily tasks, source excerpts, and confirmation warnings.
 
 ## 5. Scope
 
-### P0: Must ship for the buildathon
+### Current demo scope (implemented)
 
-- Single image or PDF upload
-- File validation and image/PDF preview
+- File selection for one image or PDF
+- Server-side file validation at the FastAPI boundary
 - Language selection: English, Bengali, Hindi
-- Server-side multimodal AI extraction
-- Pydantic validation of the model response and strict Dart parsing
+- Pydantic validation of the deterministic sample response and strict Dart parsing
 - Review screen showing extracted patient/discharge context
 - Seven-day plan grouped by day and time of day
 - Sections for medications, care/activity, follow-ups/tests, and warning signs
@@ -114,12 +115,11 @@ A nurse or discharge coordinator who wants to provide patients with a more acces
 - Source evidence accessible for every material instruction
 - Loading, failure, and retry states
 - One bundled sample discharge summary and deterministic demo fallback
-- Native mobile UI optimised for compact and large Android phones
-- Personalisation using the patient's preferred name and selected language
-- Optional local notification permission request after a plan is generated
-- On-device reminders for confirmed plan items with explicit times
+- Responsive mobile-web UI with a custom dark Material theme
+- Language-specific synthetic plan content in English, Bengali, and Hindi
+- Reminder-candidate review UI; no notification permission or scheduling
 
-### P1: Implement only if P0 is stable
+### Deferred future work
 
 - Print-friendly plan
 - Download plan as JSON
@@ -128,6 +128,10 @@ A nurse or discharge coordinator who wants to provide patients with a more acces
 - “Today” highlight and task checkboxes stored locally
 - Reminder management screen with enable, disable, and reschedule controls
 - Caregiver mode with larger text and simplified navigation
+- Real server-side multimodal extraction and provider configuration
+- Client API integration for real uploads
+- Persisted preferences and local notification scheduling
+- Android release packaging and HTTPS backend deployment
 
 ### Explicit non-goals
 
@@ -143,7 +147,7 @@ A nurse or discharge coordinator who wants to provide patients with a more acces
 - Production compliance claims
 - Supporting every Indian language in the MVP
 
-Local notifications are in P0 because they demonstrate Flutter's personalisation advantage. Remote notifications remain out of scope. The coding agent must not implement other non-goals unless all P0 acceptance tests pass and the user explicitly requests an expansion.
+Remote notifications remain out of scope. Local notifications and on-device preferences are also deferred: the required packages and platform integrations are not present in the current demo.
 
 ## 6. Product principles and safety requirements
 
@@ -226,11 +230,11 @@ Each plan item must display:
 - status badge when confirmation is required; and
 - an expandable “From your document” source excerpt.
 
-### Screen 4: Reminder setup
+### Screen 4: Reminder review (implemented UI; scheduling deferred)
 
 **Purpose:** Turn confirmed, time-specific plan items into a personalised recovery routine.
 
-Required behaviour:
+The current app presents eligible reminder candidates after a valid sample plan is available. It does not request notification permission, persist preferences, or schedule notifications. The following behaviour is a future implementation requirement:
 
 - Enter this screen only after a valid plan is available.
 - Explain that reminders stay on the device and can be changed or disabled.
@@ -242,7 +246,7 @@ Required behaviour:
 - Use neutral notification copy such as “CarePath reminder: Check your recovery plan for the scheduled instruction.” Do not expose medicine names or diagnoses on the lock screen by default.
 - Store scheduled notification identifiers locally so reminders can be cancelled or replaced.
 
-For the live demo, include a **Preview reminder in 10 seconds** action backed by synthetic sample data. It must be clearly labelled as a demo preview and must not change the medical schedule.
+For a future live demo, a **Preview reminder in 10 seconds** action may use synthetic sample data. It must be clearly labelled as a demo preview and must not change the medical schedule.
 
 ### Empty and error states
 
@@ -254,9 +258,9 @@ For the live demo, include a **Preview reminder in 10 seconds** action backed by
 
 ## 8. Functional requirements
 
-### FR-01: Upload document
+### FR-01: Select document
 
-The client must accept one supported file, validate it locally, and send it as `multipart/form-data` to the server endpoint.
+The client uses `file_picker` to select one file and retains its display name for the demo flow. The FastAPI endpoint accepts `multipart/form-data` with `language`, `useSample`, and an optional `file`; it validates supported PDF/PNG/JPG/JPEG uploads and the 10 MB limit when invoked.
 
 ### FR-02: Select output language
 
@@ -268,13 +272,13 @@ Supported language codes:
 
 The language affects simplified instructions and UI plan content. Medication names, measurements, and source evidence must remain faithful to the source.
 
-### FR-03: Extract structured instructions
+### FR-03: Provide structured instructions
 
-The server sends the document to a multimodal model and requires JSON matching `DischargePlanSchema`.
+The current Flutter flow loads the language-specific bundled plan fixture. The FastAPI endpoint returns an equivalent deterministic Pydantic-validated sample response when `useSample=true`. Real document uploads return the safe `MODEL_UNAVAILABLE` error until a backend-only multimodal provider adapter is configured.
 
-### FR-04: Validate and normalise
+### FR-04: Validate and parse
 
-The server must:
+The current backend validates the sample response with Pydantic and the Flutter app parses it into explicit Dart models. When a provider is added, the backend must:
 
 1. parse the model response;
 2. validate it with Pydantic;
@@ -303,11 +307,11 @@ The result must provide a consolidated list of:
 
 The sample flow must return a deterministic valid response even if the external AI provider is unavailable. It must be visually marked as demo data.
 
-### FR-09: Personalise the plan
+### FR-09: Personalise the plan (deferred)
 
 When a patient display name exists, use it only in private in-app headings such as “Arun's recovery plan.” Do not include the name in lock-screen notification content. Persist language, text-size preference, and reminder privacy preference locally; do not persist the uploaded document.
 
-### FR-10: Schedule local reminders
+### FR-10: Schedule local reminders (deferred)
 
 The Flutter client must derive eligible reminders from confirmed plan items, request notification permission at the moment of user intent, and schedule them using the device time zone.
 
@@ -327,7 +331,7 @@ Default time-of-day mappings are UI suggestions, not medical interpretations:
 
 The user must review and approve these clock times before scheduling. `anytime` items are never scheduled automatically.
 
-### FR-11: Manage reminder lifecycle
+### FR-11: Manage reminder lifecycle (deferred)
 
 - Keep a local mapping of plan-item ID to notification ID.
 - Re-generating or replacing a plan must prompt before cancelling existing reminders.
@@ -336,101 +340,72 @@ The user must review and approve these clock times before scheduling. `anytime` 
 
 ## 9. Technical architecture
 
-### Required stack
+### Implemented stack
 
-- **Client:** Flutter stable with Dart 3, targeting Android for the live demo
-- **State management:** Riverpod without code generation unless the repository already uses it
-- **Navigation:** A single flow using `Navigator` or `go_router` only if already configured
-- **Networking:** Dio with typed error mapping and request timeouts
-- **File input:** `file_picker`; add `image_picker` only if camera capture is required
-- **Local settings:** `shared_preferences` for non-sensitive preferences
-- **Notifications:** `flutter_local_notifications` plus `timezone`
-- **Backend:** Python FastAPI with Pydantic validation
-- **AI integration:** Backend-only multimodal model adapter
-- **Testing:** Flutter unit/widget tests and pytest for backend schema/normalisation tests
-- **Deployment:** Android debug/release APK for demo; backend on an HTTPS host
+- **Flutter client:** Flutter `3.44.9` pinned by `.fvmrc`, with Dart `^3.13.0` declared by the app, Material UI, and a custom dark `ThemeData`. The pinned SDK currently supplies Dart 3.12.2 and must be upgraded before dependency resolution and Flutter verification can run.
+- **Target:** Mobile-web-first, demonstrated with Chrome. The generated Android host project is included; iOS, an Android release build, and hosting are not part of the verified demo.
+- **State management:** `flutter_bloc` `9.1.1` with one `CarePlanCubit`, `CarePlanState`, and `Equatable` `2.0.7` value equality.
+- **Navigation:** One `MaterialApp` rooted at `UploadScreen`; phase changes within the Cubit select the upload, processing, plan, and reminder-review views. No router package is used.
+- **File input:** `file_picker` `10.3.2` for selecting a document.
+- **Demo data:** A synthetic discharge-summary PDF plus `sample_plan_en.json`, `sample_plan_bn.json`, and `sample_plan_hi.json` in Flutter assets, loaded with `rootBundle`.
+- **Backend:** Python FastAPI `0.116.1`, Pydantic `2.11.7`, `python-multipart` `0.0.20`, Uvicorn `0.35.0`, pytest `8.4.1`, and HTTPX `0.28.1`.
+- **Testing:** Flutter unit and widget tests, plus pytest endpoint/schema tests.
 
-Do not add Firebase solely for local notifications. Remote push messaging is not required.
+`Dio`, `go_router`, `shared_preferences`, `flutter_local_notifications`, `timezone`, Firebase, and a model-provider SDK are not dependencies of this project. They remain possible future additions, not part of the current stack.
 
 ### High-level flow
 
 ```text
 Flutter app
-  -> choose PDF/image and output language
-  -> POST /api/v1/plans (multipart file + language)
+  -> choose a file or the synthetic demo document and output language
+  -> current demo: load the matching bundled JSON fixture with rootBundle
+  -> future client integration: POST /api/v1/plans (multipart language, useSample, optional file)
 FastAPI
-  -> validate file and language
-  -> convert file to provider-compatible input
-  -> multimodal extraction with strict JSON instruction
-  -> validate with Pydantic
-  -> normalise schedule
-  -> return versioned DischargePlan JSON
+  -> useSample=true: validate and return deterministic Pydantic sample data
+  -> real upload: validate type and 10 MB limit, then return safe MODEL_UNAVAILABLE
 Flutter app
   -> parse typed DTO
-  -> render personalised seven-day plan
-  -> user reviews eligible reminders and clock times
-  -> schedule local notifications on device
+  -> render seven-day plan, source evidence, and confirmation issues
+  -> show reminder candidates only; notification scheduling is deferred
 ```
 
 ### Security boundary
 
-The Flutter binary must never contain the AI provider API key. All model calls must happen in the FastAPI backend. Keep secrets in backend environment variables. The client receives only the validated plan response and safe error information.
+The Flutter binary must never contain an AI provider API key. If a provider is configured later, all model calls must occur in the FastAPI backend and its secrets must remain in backend environment variables. The current backend contains no provider credentials or provider call.
 
 The backend must not persist uploads or log document contents. Use short request timeouts, bounded file size, and generated request IDs that contain no patient information.
 
-### Recommended project structure
+### Actual project structure
 
 ```text
 app/
   lib/
-    app.dart
-    core/
-      api/api_client.dart
-      errors/app_failure.dart
-      theme/app_theme.dart
-    features/care_plan/
-      data/
-        care_plan_api.dart
-        care_plan_repository.dart
-        sample_plan_fixture.dart
-      domain/
-        discharge_plan.dart
-        reminder_candidate.dart
-      presentation/
-        care_plan_controller.dart
-        upload_screen.dart
-        processing_screen.dart
-        plan_screen.dart
-        reminder_setup_screen.dart
-        widgets/
-          confirmation_banner.dart
-          day_selector.dart
-          timeline_item_card.dart
-          source_evidence_sheet.dart
-          warning_signs_card.dart
-    services/
-      notification_service.dart
-      preferences_service.dart
-  assets/samples/synthetic_discharge_summary.pdf
+    main.dart
+    src/
+      care_plan_cubit.dart
+      models.dart
+      upload_screen.dart
+      plan_screen.dart
+      theme.dart
+  assets/samples/
+    synthetic_discharge_summary.pdf
+    sample_plan_en.json
+    sample_plan_bn.json
+    sample_plan_hi.json
   test/
-    discharge_plan_test.dart
-    reminder_eligibility_test.dart
-    plan_screen_test.dart
+    care_plan_cubit_test.dart
+    models_test.dart
+    widget_test.dart
 backend/
   app/
     main.py
-    api/plans.py
     models/discharge_plan.py
-    services/ai_provider.py
-    services/extraction_prompt.py
-    services/plan_normalizer.py
-    services/safe_logger.py
+    services/sample_fixture.py
   tests/
-    test_schema.py
-    test_plan_endpoint.py
+    test_api.py
 ```
 
-Keep one Riverpod controller for the main flow. Do not add Clean Architecture layers beyond the small structure above, database abstractions, background servers, or generalized notification frameworks.
+Keep the single `CarePlanCubit` flow and lightweight file layout unless a new capability justifies a larger boundary. No database, authentication, background server, preferences service, or notification framework is currently implemented.
 
 ## 10. Data contracts
 
@@ -635,51 +610,38 @@ If validation fails:
 - Status must never rely on colour alone.
 - Bengali and Hindi text must use a font stack that renders their scripts correctly.
 
-## 13. Acceptance criteria
+## 13. Current demo acceptance criteria
 
 ### Upload and processing
 
-- [ ] A user can upload a supported file under 10 MB.
-- [ ] Unsupported and oversized files are rejected before the API call.
-- [ ] The API key is never present in the Flutter binary, application assets, or API responses.
-- [ ] The processing UI remains responsive while waiting.
-- [ ] The sample workflow functions without an external model call.
+- [x] A user can select a supported file or use the bundled synthetic document.
+- [x] The FastAPI endpoint rejects unsupported and oversized uploads when called.
+- [x] The sample workflow functions without an external model call or credentials.
+- [x] The processing UI remains responsive while loading bundled fixture data.
 
 ### Extraction safety
 
-- [ ] Every medication has non-empty source evidence.
-- [ ] Missing medication details remain `null` and produce a confirmation issue.
-- [ ] Items marked confirmed originate from source text.
-- [ ] A schema-invalid model response is never rendered directly.
-- [ ] No logs contain document contents or patient identifiers.
+- [x] Bundled plans are validated by Pydantic at the backend boundary and strictly parsed by Dart models.
+- [x] Sample items expose source evidence and confirmation issues.
+- [x] The backend returns safe error messages without uploaded document contents.
 
 ### Plan experience
 
-- [ ] The result displays Day 1 through Day 7.
-- [ ] Instructions are grouped by time of day.
-- [ ] Users can reveal source evidence for each item.
-- [ ] Confirmation issues appear before the daily plan.
-- [ ] English, Bengali, and Hindi output render correctly.
-- [ ] The interface works on a compact Android phone and a large phone without overflow.
-- [ ] Text scaling at 1.3x does not clip critical controls or instructions.
+- [x] The result displays Day 1 through Day 7, grouped by time of day.
+- [x] Users can reveal source evidence and see confirmation issues before the daily plan.
+- [x] English, Bengali, and Hindi fixtures are available.
+- [x] The layout is designed for mobile web and can be run in Chrome.
 
-### Notifications and personalisation
+### Deferred notification and preference work
 
-- [ ] The app asks for notification permission only after the user taps **Enable reminders**.
-- [ ] Only confirmed, explicit-time items are eligible for reminders.
-- [ ] The user reviews suggested clock times before scheduling.
-- [ ] Lock-screen notification text hides medicine and diagnosis details by default.
-- [ ] Denying permission does not block the care plan.
-- [ ] Replacing a plan does not silently leave stale reminders scheduled.
-- [ ] The demo preview notification fires from sample data and is clearly labelled as a preview.
+No notification or local-preference acceptance criteria apply to the current demo. These require additional packages, platform configuration, and tests before being enabled.
 
 ### Error handling
 
-- [ ] Unreadable or unsupported documents produce a safe actionable error.
-- [ ] Provider failure does not expose technical or patient information.
-- [ ] Retry does not submit more than once after the initial failure.
+- [x] Unsupported uploads and unavailable real processing produce safe actionable errors.
+- [x] Provider-unavailable responses do not expose document contents or provider details.
 
-## 14. Test fixtures
+## 14. Test fixtures and automated coverage
 
 Create a synthetic discharge summary containing:
 
@@ -697,89 +659,65 @@ Expected fixture behaviour:
 - Relative follow-up remains relative unless a discharge date is present.
 - Unclear line creates a confirmation issue and is not converted into a confirmed instruction.
 
-Minimum automated tests:
+Implemented automated coverage:
 
-1. Valid fixture passes backend Pydantic validation and Flutter DTO parsing.
-2. Medication without `sourceEvidence` fails backend validation.
-3. Day outside 1-7 fails validation.
-4. Schedule normaliser groups known timing correctly.
-5. Unsupported file type is rejected.
-6. Sample endpoint returns deterministic data.
-7. Reminder eligibility excludes ambiguous, conflicting, and `anytime` items.
-8. Notification content does not contain patient or medicine names by default.
+1. Flutter Cubit tests cover language selection, document/sample selection, processing states, and fixture loading.
+2. Flutter model tests cover typed plan parsing and safety-related fields.
+3. Flutter widget tests cover the primary app shell and sample-plan flow.
+4. Backend tests cover health, deterministic sample responses, file validation, the 10 MB limit, and the safe unavailable-provider response.
 
-## 15. Four-hour implementation plan
+## 15. Implementation status
 
-### Hour 1: Foundation
+### Implemented
 
-- Create the Flutter project and FastAPI skeleton.
-- Add the authoritative Pydantic models and matching Dart DTOs.
-- Implement the synthetic sample response.
-- Build upload, language selection, controller, and result-shell widgets.
-- Make the complete sample journey work before connecting AI.
+- Flutter project with FVM-pinned SDK, mobile-web target, dark Material UI, `CarePlanCubit`, explicit Dart models, and bundled fixtures.
+- Deterministic English, Bengali, and Hindi sample-plan flow with processing, plan, source-evidence, confirmation, and reminder-candidate screens.
+- FastAPI `POST /api/v1/plans` endpoint with language/form parsing, file validation, Pydantic-validated sample responses, and safe unavailable-provider errors.
 
-### Hour 2: AI pipeline
+### Deferred
 
-- Implement `POST /api/v1/plans` in FastAPI.
-- Add file validation and server-only provider adapter.
-- Add extraction prompt and structured response handling.
-- Validate output and implement the one-retry policy.
+- Client-to-backend networking, a multimodal AI provider adapter, and real document extraction.
+- Notification scheduling, permissions, preview notifications, and persisted preferences.
+- Android release builds, iOS support, and HTTPS deployment.
 
-### Hour 3: Plan UI and safety
+## 16. Verification commands
 
-- Render day tabs and timeline items.
-- Add confirmation banner and source-evidence disclosure.
-- Add follow-ups, tests, and warning-sign sections.
-- Verify Bengali/Hindi rendering, text scaling, and small-screen behaviour.
+Run the following commands from the repository root to verify the implemented demo:
 
-### Hour 4: Reliability and demo preparation
+```bash
+cd app && fvm dart format --set-exit-if-changed . && fvm flutter analyze && fvm flutter test
+cd backend && .venv/bin/pytest -q
+cd app && fvm flutter build web --release
+```
 
-- Test the real sample document and deterministic fallback.
-- Add notification service, eligibility filter, permission flow, and preview reminder.
-- Add safe error states.
-- Run Flutter tests, backend tests, static analysis, and an Android build.
-- Rehearse the three-minute demo.
-- Only then add print/share support or additional personalisation.
-
-## 16. AI coding agent execution contract
-
-The implementing agent must follow this order:
-
-1. Inspect the existing repository and preserve its package manager and conventions.
-2. Produce a short implementation plan mapped to P0 requirements.
-3. Implement the backend Pydantic contract, matching Dart DTOs, and sample fixture first.
-4. Build a fully working sample-data vertical slice.
-5. Add the real server-side AI adapter behind the same typed interface.
-6. Add unit tests for schemas, parsing, file validation, schedule normalisation, and reminder eligibility.
-7. Run Dart formatting, Flutter analysis/tests, pytest, and an Android build.
-8. Report completed requirements, deferred items, and known risks.
+These commands require FVM to resolve a Flutter SDK with Dart 3.13 or later. With the current Flutter 3.44.9 pin, `fvm flutter pub get` fails before analysis or tests can run.
 
 ### Agent constraints
 
 - Do not modify the authoritative data contract without explaining why.
 - Do not add a database, authentication, Docker, queues, analytics, or orchestration frameworks.
-- Do not call the model from Flutter client code or bundle provider credentials in the app.
+- Do not call a model from Flutter client code or bundle provider credentials in the app.
 - Do not use unvalidated model output in the UI.
 - Do not fabricate fallback medical content. Only the bundled synthetic fixture may be deterministic.
 - Do not log document contents.
 - Do not silently swallow extraction uncertainty.
-- Do not schedule notifications for unclear, conflicting, or `anytime` instructions.
-- Do not expose patient, condition, or medicine names in notifications by default.
+- If notification support is added, do not schedule unclear, conflicting, or `anytime` instructions.
+- If notification support is added, do not expose patient, condition, or medicine names by default.
 - Prefer small pure functions and typed data over generalized abstractions.
 - Use comments only for safety-critical or non-obvious reasoning.
-- Stop P1 work if any P0 test or production build fails.
+- Keep deferred integrations out of the demo unless their tests and platform builds pass.
 
 ### Definition of done
 
-The MVP is done when:
+The current demo is done when:
 
 - the sample journey works end-to-end;
-- one real synthetic discharge document can be processed through the model;
+- the bundled synthetic document can produce the matching language-specific plan without a model call;
 - all returned data passes backend Pydantic validation and strict Dart parsing;
 - uncertainty and source evidence are visible;
 - no secret is exposed to the client;
 - required tests pass;
-- `dart format --set-exit-if-changed .`, `flutter analyze`, `flutter test`, backend pytest, and an Android build succeed, adjusted only when the repository has equivalent verified commands; and
+- `fvm dart format --set-exit-if-changed .`, `fvm flutter analyze`, `fvm flutter test`, backend pytest, and `fvm flutter build web --release` succeed; and
 - the project can be demonstrated reliably within three minutes.
 
 ## 17. Demo script
@@ -801,11 +739,11 @@ Show:
 - the Bengali simplified instruction; and
 - the original source excerpt behind a plan item.
 
-Then open reminder setup, demonstrate that the unclear medicine is excluded, approve one confirmed sample reminder, and trigger the privacy-safe 10-second preview.
+Then open reminder review and demonstrate that confirmed and unclear instructions remain visibly distinct. Explain that notification permission, scheduling, and the 10-second preview are deferred from this demo.
 
 ### 2:30-3:00 - Trust and impact
 
-“The product does not diagnose or invent instructions. It organises what the hospital wrote, preserves evidence, tells the family what must be confirmed, and turns confirmed instructions into a private recovery routine on their phone.”
+“The product does not diagnose or invent instructions. It organises the synthetic discharge plan, preserves evidence, and tells the family what must be confirmed.”
 
 ## 18. Future roadmap
 
@@ -825,4 +763,4 @@ After user and clinician validation—not during the buildathon—the product co
 
 For the buildathon, optimise for **one trustworthy transformation**, not feature breadth:
 
-> Upload one synthetic discharge summary and receive a traceable, multilingual seven-day plan that separates confirmed instructions from information requiring clinician confirmation, then optionally schedule privacy-safe local reminders for eligible confirmed items.
+> Select one synthetic discharge summary and receive a traceable, multilingual seven-day plan that separates confirmed instructions from information requiring clinician confirmation. Local reminders are a future enhancement.
