@@ -135,7 +135,7 @@ class Patient(StrictModel):
 class DischargePlan(StrictModel):
     schemaVersion: Literal["1.0"] = "1.0"
     documentType: Literal["discharge_summary", "unsupported", "uncertain"]
-    outputLanguage: Literal["en", "bn", "hi"]
+    outputLanguage: Literal["en", "bn", "hi", "kn"]
     patient: Patient
     overview: str = Field(min_length=1)
     medications: list[Medication]
@@ -144,4 +144,3 @@ class DischargePlan(StrictModel):
     warningSigns: list[WarningSign]
     confirmationIssues: list[ConfirmationIssue]
     extractionWarnings: list[str]
-

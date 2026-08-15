@@ -134,16 +134,94 @@ class DischargePlan extends Equatable {
     required this.followUps,
     required this.warnings,
     required this.extractionWarnings,
+    this.dischargeDate,
   });
+
   final String language, patientName, hospital, overview;
+  final String? dischargeDate;
   final List<PlanItem> items;
   final List<ConfirmationIssue> issues;
   final List<EvidenceNote> followUps, warnings;
   final List<String> extractionWarnings;
 
+  static const _weekdaysShort = [
+    'Mon',
+    'Tue',
+    'Wed',
+    'Thu',
+    'Fri',
+    'Sat',
+    'Sun',
+  ];
+  static const _weekdaysFull = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
+  static const _monthsShort = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  static const _monthsFull = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+
+  DateTime dateForDay(int day) {
+    DateTime base;
+    if (dischargeDate != null && dischargeDate!.trim().isNotEmpty) {
+      try {
+        base = DateTime.parse(dischargeDate!.trim());
+      } catch (_) {
+        base = DateTime.now();
+      }
+    } else {
+      base = DateTime.now();
+    }
+    return base.add(Duration(days: (day - 1).clamp(0, 6)));
+  }
+
+  String dayChipLabel(int day) {
+    final dt = dateForDay(day);
+    final w = _weekdaysShort[dt.weekday - 1];
+    final m = _monthsShort[dt.month - 1];
+    return '$w, ${dt.day} $m • Day $day';
+  }
+
+  String dayFullHeading(int day) {
+    final dt = dateForDay(day);
+    final w = _weekdaysFull[dt.weekday - 1];
+    final m = _monthsFull[dt.month - 1];
+    return '$w, ${dt.day} $m • Day $day Routine';
+  }
+
   factory DischargePlan.fromJson(Map<String, dynamic> json) {
     if (json['schemaVersion'] != '1.0' ||
-        !['en', 'bn', 'hi'].contains(json['outputLanguage'])) {
+        !['en', 'bn', 'hi', 'kn'].contains(json['outputLanguage'])) {
       throw const FormatException('Unsupported plan schema');
     }
     final patient = json['patient'] as Map<String, dynamic>;
@@ -167,6 +245,7 @@ class DischargePlan extends Equatable {
     return DischargePlan(
       language: json['outputLanguage'] as String,
       patientName: patient['displayName'] as String? ?? 'Your',
+      dischargeDate: patient['dischargeDate'] as String?,
       hospital: patient['hospital'] as String? ?? 'Hospital',
       overview: json['overview'] as String,
       items: [
@@ -212,10 +291,12 @@ class DischargePlan extends Equatable {
       extractionWarnings: (json['extractionWarnings'] as List).cast<String>(),
     );
   }
+
   @override
   List<Object?> get props => [
     language,
     patientName,
+    dischargeDate,
     hospital,
     overview,
     items,

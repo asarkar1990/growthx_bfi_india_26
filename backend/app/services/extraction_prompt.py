@@ -7,7 +7,7 @@ You are not a doctor and must not generate medical advice. Use only information 
 
 
 def extraction_prompt(
-    language: Literal["en", "bn", "hi"],
+    language: Literal["en", "bn", "hi", "kn"],
     repair_errors: str | None = None,
 ) -> str:
     prompt = (

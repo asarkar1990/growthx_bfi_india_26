@@ -3,30 +3,92 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'care_plan_cubit.dart';
+import 'history_screen.dart';
+import 'models.dart';
 import 'plan_screen.dart';
 import 'theme.dart';
 
 class UploadScreen extends StatelessWidget {
   const UploadScreen({super.key});
+
   @override
-  Widget build(BuildContext context) =>
-      BlocBuilder<CarePlanCubit, CarePlanState>(
-        builder: (context, state) => switch (state.phase) {
-          CarePlanPhase.processing => const ProcessingView(),
-          CarePlanPhase.ready || CarePlanPhase.reminders => const PlanScreen(),
-          CarePlanPhase.failure => FailureView(
-            message: state.error ?? 'Something went wrong.',
-          ),
-          _ => const UploadView(),
-        },
-      );
+  Widget build(BuildContext context) {
+    final state = context.watch<CarePlanCubit>().state;
+    final cubit = context.read<CarePlanCubit>();
+
+    final Widget body;
+    if (state.currentTab == 1) {
+      body = const HistoryScreen();
+    } else {
+      body = switch (state.phase) {
+        CarePlanPhase.processing => const ProcessingView(),
+        CarePlanPhase.confirming => ConfirmationView(
+          plan: state.pendingPlan ?? state.plan!,
+        ),
+        CarePlanPhase.ready || CarePlanPhase.reminders => const PlanScreen(),
+        CarePlanPhase.failure => FailureView(
+          message: state.error ?? 'Something went wrong.',
+        ),
+        _ => const UploadView(),
+      };
+    }
+
+    return Scaffold(
+      body: body,
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: AppTheme.surface,
+          border: Border(top: BorderSide(color: Color(0xFF281E40), width: 1)),
+        ),
+        child: NavigationBar(
+          backgroundColor: Colors.transparent,
+          indicatorColor: const Color(0xFF3B2A64),
+          selectedIndex: state.currentTab,
+          onDestinationSelected: (index) {
+            cubit.switchTab(index);
+          },
+          destinations: [
+            NavigationDestination(
+              icon: const Icon(Icons.home_outlined),
+              selectedIcon: const Icon(
+                Icons.home_rounded,
+                color: AppTheme.lavender,
+              ),
+              label: state.plan != null ? 'Active Plan' : 'Home',
+            ),
+            NavigationDestination(
+              icon: Badge(
+                isLabelVisible: state.savedSummaries.isNotEmpty,
+                label: Text('${state.savedSummaries.length}'),
+                backgroundColor: AppTheme.lavender,
+                child: const Icon(Icons.folder_shared_outlined),
+              ),
+              selectedIcon: Badge(
+                isLabelVisible: state.savedSummaries.isNotEmpty,
+                label: Text('${state.savedSummaries.length}'),
+                backgroundColor: AppTheme.lavender,
+                child: const Icon(
+                  Icons.folder_shared_rounded,
+                  color: AppTheme.lavender,
+                ),
+              ),
+              label: 'Summaries',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class PageShell extends StatelessWidget {
-  const PageShell({required this.child, super.key});
+  const PageShell({required this.child, this.appBar, super.key});
   final Widget child;
+  final PreferredSizeWidget? appBar;
+
   @override
   Widget build(BuildContext context) => Scaffold(
+    appBar: appBar,
     body: SafeArea(
       child: Center(
         child: ConstrainedBox(
@@ -38,8 +100,8 @@ class PageShell extends StatelessWidget {
   );
 }
 
-class Brand extends StatelessWidget {
-  const Brand({super.key});
+class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const HomeAppBar({super.key});
 
   void _showServerSettings(BuildContext context) {
     final cubit = context.read<CarePlanCubit>();
@@ -222,76 +284,77 @@ class Brand extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<CarePlanCubit>().state;
-    return Row(
-      children: [
-        Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: AppTheme.violet,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Icon(Icons.route_rounded, color: Colors.white),
-        ),
-        const SizedBox(width: 12),
-        const Expanded(
-          child: Text(
+    final statusColor = state.backendConnected == true
+        ? Colors.greenAccent
+        : state.backendConnected == false
+        ? Colors.redAccent
+        : AppTheme.lavender;
+
+    return AppBar(
+      backgroundColor: AppTheme.surface,
+      surfaceTintColor: Colors.transparent,
+      titleSpacing: 16,
+      title: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.route_rounded, color: AppTheme.lavender, size: 24),
+          SizedBox(width: 10),
+          Text(
             'CarePath',
-            overflow: TextOverflow.ellipsis,
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
           ),
-        ),
-        InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: () => _showServerSettings(context),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceHigh,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: state.backendConnected == true
-                    ? Colors.green.withValues(alpha: 0.5)
-                    : const Color(0xFF3B3054),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 7,
-                  height: 7,
+        ],
+      ),
+      actions: [
+        IconButton(
+          tooltip: 'API settings',
+          onPressed: () => _showServerSettings(context),
+          icon: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              const Icon(Icons.settings_outlined),
+              Positioned(
+                right: -2,
+                top: -2,
+                child: Container(
+                  width: 8,
+                  height: 8,
                   decoration: BoxDecoration(
+                    color: statusColor,
                     shape: BoxShape.circle,
-                    color: state.backendConnected == true
-                        ? Colors.greenAccent
-                        : state.backendConnected == false
-                        ? Colors.redAccent
-                        : AppTheme.lavender,
+                    border: Border.all(color: AppTheme.surface, width: 1.5),
                   ),
                 ),
-                const SizedBox(width: 6),
-                const Text(
-                  'API',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.lavender,
-                  ),
-                ),
-                const SizedBox(width: 2),
-                const Icon(
-                  Icons.settings_outlined,
-                  size: 13,
-                  color: AppTheme.lavender,
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
+        const SizedBox(width: 8),
       ],
     );
   }
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+}
+
+class Brand extends StatelessWidget {
+  const Brand({super.key});
+
+  @override
+  Widget build(BuildContext context) => const Row(
+    children: [
+      Icon(Icons.route_rounded, color: AppTheme.lavender, size: 24),
+      SizedBox(width: 10),
+      Expanded(
+        child: Text(
+          'CarePath',
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+        ),
+      ),
+    ],
+  );
 }
 
 class UploadView extends StatelessWidget {
@@ -314,41 +377,24 @@ class UploadView extends StatelessWidget {
     final cubit = context.read<CarePlanCubit>();
     final state = context.watch<CarePlanCubit>().state;
     return PageShell(
+      appBar: const HomeAppBar(),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+        padding: const EdgeInsets.fromLTRB(20, 32, 20, 32),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Brand(),
-            const SizedBox(height: 42),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF2A1B4B),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Text(
-                'YOUR FIRST 7 DAYS, MADE CLEAR',
-                style: TextStyle(
-                  color: AppTheme.lavender,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
             Text(
-              'Recovery instructions,\nwithout the overwhelm.',
+              'Get Well Soon',
               style: Theme.of(context).textTheme.headlineLarge,
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 14),
-            Text(
-              'Upload your discharge summary. We’ll organise exactly what the hospital wrote into a simple day-by-day plan.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyLarge?.copyWith(color: const Color(0xFFB9B1C8)),
+            const SizedBox(height: 8),
+            const Text(
+              'Start with your discharge summary.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Color(0xFFB9B1C8), height: 1.45),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 26),
             Card(
               child: InkWell(
                 borderRadius: BorderRadius.circular(20),
@@ -358,88 +404,100 @@ class UploadView extends StatelessWidget {
                   child: Column(
                     children: [
                       Container(
-                        width: 56,
-                        height: 56,
+                        width: 52,
+                        height: 52,
                         decoration: BoxDecoration(
                           color: const Color(0xFF2A1B4B),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: const Icon(
-                          Icons.upload_file_rounded,
+                          Icons.description_outlined,
                           color: AppTheme.lavender,
-                          size: 30,
+                          size: 28,
                         ),
                       ),
-                      const SizedBox(height: 15),
+                      const SizedBox(height: 14),
                       Text(
-                        state.fileName ?? 'Choose discharge document',
+                        state.fileName ?? 'Add discharge summary',
                         style: Theme.of(context).textTheme.titleMedium,
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 6),
                       Text(
                         state.fileName == null
-                            ? 'PDF, PNG or JPG • up to 10 MB'
-                            : 'Ready to organise • tap to replace',
+                            ? 'PDF, PNG or JPG'
+                            : 'Ready to turn into a plan',
                         style: const TextStyle(color: Color(0xFF9C93AC)),
                       ),
-                      const SizedBox(height: 16),
-                      OutlinedButton.icon(
-                        onPressed: () => _pick(context),
-                        icon: const Icon(Icons.folder_open_rounded),
-                        label: const Text('Browse files'),
-                      ),
+                      const SizedBox(height: 14),
+                      if (state.fileName == null)
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: () => _pick(context),
+                            icon: const Icon(Icons.upload_file_rounded),
+                            label: const Text('Upload discharge summary'),
+                          ),
+                        )
+                      else
+                        TextButton.icon(
+                          onPressed: () => _pick(context),
+                          icon: const Icon(Icons.swap_horiz_rounded, size: 18),
+                          label: const Text('Replace document'),
+                        ),
                     ],
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 18),
-            Text(
-              'Plan language',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                for (final option in const [
-                  ('en', 'English'),
-                  ('bn', 'বাংলা'),
-                  ('hi', 'हिन्दी'),
-                ])
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: ChoiceChip(
-                        label: SizedBox(
-                          width: double.infinity,
-                          child: Text(option.$2, textAlign: TextAlign.center),
-                        ),
-                        selected: state.language == option.$1,
-                        onSelected: (_) => cubit.setLanguage(option.$1),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            OutlinedButton.icon(
-              onPressed: cubit.useSample,
-              icon: const Icon(Icons.auto_awesome_rounded),
-              label: const Text('Use synthetic demo document'),
-            ),
             if (state.error != null) ...[
               const SizedBox(height: 12),
               Text(state.error!, style: const TextStyle(color: AppTheme.amber)),
             ],
-            const SizedBox(height: 22),
-            FilledButton.icon(
-              onPressed: () => cubit.createPlan(),
-              icon: const Icon(Icons.arrow_forward_rounded),
-              label: const Text('Create my recovery plan'),
+            if (state.fileName != null) ...[
+              const SizedBox(height: 18),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  color: AppTheme.surface,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFF302746)),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: state.language,
+                    isExpanded: true,
+                    icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                    items: const [
+                      DropdownMenuItem(value: 'en', child: Text('English')),
+                      DropdownMenuItem(value: 'bn', child: Text('বাংলা')),
+                      DropdownMenuItem(value: 'hi', child: Text('हिन्दी')),
+                      DropdownMenuItem(value: 'kn', child: Text('ಕನ್ನಡ')),
+                    ],
+                    onChanged: (language) {
+                      if (language != null) cubit.setLanguage(language);
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () => cubit.createPlan(),
+                  icon: const Icon(Icons.arrow_forward_rounded),
+                  label: const Text('Create recovery plan'),
+                ),
+              ),
+            ],
+            const SizedBox(height: 18),
+            const Center(
+              child: Text(
+                'CarePath organises your instructions — it does not replace your care team.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: Color(0xFF9C93AC)),
+              ),
             ),
-            const SizedBox(height: 20),
-            const _SafetyNote(),
           ],
         ),
       ),
@@ -447,34 +505,482 @@ class UploadView extends StatelessWidget {
   }
 }
 
-class _SafetyNote extends StatelessWidget {
-  const _SafetyNote();
+class ConfirmationView extends StatelessWidget {
+  const ConfirmationView({required this.plan, super.key});
+  final DischargePlan plan;
+
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: const Color(0xFF151221),
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: const Color(0xFF302746)),
-    ),
-    child: const Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(Icons.shield_outlined, color: AppTheme.lavender, size: 21),
-        SizedBox(width: 11),
-        Expanded(
-          child: Text(
-            'CarePath organises instructions from your discharge document. It does not provide medical advice or replace your doctor. Confirm unclear or conflicting information with your care team.',
-            style: TextStyle(
-              fontSize: 13,
-              color: Color(0xFFB9B1C8),
-              height: 1.45,
+  Widget build(BuildContext context) {
+    final cubit = context.read<CarePlanCubit>();
+    final medCount = plan.items.length;
+
+    return PageShell(
+      appBar: const HomeAppBar(),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 36),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2A1B4B),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFF45316E)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF382364),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.verified_outlined,
+                      color: AppTheme.lavender,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Confirm & Save Plan',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Review full extracted details before activating.',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: Color(0xFFB9B1C8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+            const SizedBox(height: 18),
+
+            // 1. Patient & Hospital Header Card
+            Card(
+              elevation: 0,
+              color: const Color(0xFF1B162C),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: const BorderSide(color: Color(0xFF33294E)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                plan.patientName,
+                                style: const TextStyle(
+                                  fontSize: 19,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                plan.hospital,
+                                style: const TextStyle(
+                                  color: Color(0xFFB4ACCE),
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (plan.dischargeDate != null &&
+                            plan.dischargeDate!.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2B1F48),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                const Text(
+                                  'DISCHARGED',
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppTheme.lavender,
+                                    letterSpacing: .5,
+                                  ),
+                                ),
+                                Text(
+                                  plan.dischargeDate!,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(height: 1, color: Color(0xFF2D2346)),
+                    const SizedBox(height: 14),
+                    const Text(
+                      'CLINICAL SUMMARY',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: .8,
+                        color: Color(0xFF9E95B2),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      plan.overview,
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        color: Color(0xFFD6D0E4),
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // 2. Full Medications Section
+            Row(
+              children: [
+                const Icon(
+                  Icons.medication_outlined,
+                  size: 18,
+                  color: AppTheme.lavender,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'MEDICATIONS TO CONFIRM ($medCount)',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: .8,
+                    color: AppTheme.lavender,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ...plan.items.map((item) {
+              final uncertain = item.status != ItemStatus.confirmedFromSource;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF161224),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: uncertain
+                          ? const Color(0xFF5A4418)
+                          : const Color(0xFF2C2248),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.title,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF241A3E),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              _timingPill(item.timing),
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.lavender,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        item.instruction,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          color: Color(0xFFE2DCED),
+                          height: 1.4,
+                        ),
+                      ),
+                      if (item.detail != null && item.detail!.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          item.detail!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFFB4ACCE),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 10),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0C0916),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'SOURCE EVIDENCE:',
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: .8,
+                                color: Color(0xFF8E86A2),
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              '“${item.evidence}”',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFFCEC7D8),
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+            const SizedBox(height: 10),
+
+            // 3. Follow-Ups & Tests (if any)
+            if (plan.followUps.isNotEmpty) ...[
+              Row(
+                children: [
+                  const Icon(
+                    Icons.event_outlined,
+                    size: 18,
+                    color: AppTheme.lavender,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'FOLLOW-UPS & TESTS (${plan.followUps.length})',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: .8,
+                      color: AppTheme.lavender,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              ...plan.followUps.map(
+                (f) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF161224),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFF2C2248)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          f.title,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        if (f.subtitle.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            f.subtitle,
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              color: Color(0xFFB4ACCE),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 6),
+                        Text(
+                          '“${f.evidence}”',
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontStyle: FontStyle.italic,
+                            color: Color(0xFF9C93AC),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+
+            // 4. Warning Signs (if any)
+            if (plan.warnings.isNotEmpty) ...[
+              const Row(
+                children: [
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    size: 18,
+                    color: Colors.amberAccent,
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'WARNING SIGNS & EMERGENCY ADVICE',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: .8,
+                      color: Colors.amberAccent,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              ...plan.warnings.map(
+                (w) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF24151B),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFF5A2633)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          w.title,
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFFFFB4B4),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Action: ${w.subtitle}',
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            color: Color(0xFFFFD6D6),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '“${w.evidence}”',
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontStyle: FontStyle.italic,
+                            color: Color(0xFFD69A9A),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+            ],
+
+            // 5. Actions Footer
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              onPressed: () {
+                cubit.confirmAndSavePendingPlan();
+              },
+              icon: const Icon(Icons.check_circle_outline_rounded),
+              label: const Text(
+                'Confirm & Activate Recovery Plan',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                side: const BorderSide(color: Color(0xFF45366E)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              onPressed: () {
+                cubit.discardPendingPlan();
+              },
+              icon: const Icon(Icons.close_rounded, size: 18),
+              label: const Text('Discard / Re-upload'),
+            ),
+          ],
         ),
-      ],
-    ),
-  );
+      ),
+    );
+  }
+
+  static String _timingPill(PlanTiming timing) {
+    return switch (timing) {
+      PlanTiming.morning => 'Morning (8:00 AM)',
+      PlanTiming.afternoon => 'Afternoon (1:00 PM)',
+      PlanTiming.evening => 'Evening (6:00 PM)',
+      PlanTiming.bedtime => 'Bedtime (9:00 PM)',
+      PlanTiming.anytime => 'As Needed (SOS)',
+    };
+  }
 }
 
 class ProcessingView extends StatelessWidget {

@@ -94,7 +94,7 @@ def _clean_json_text(text: str | None) -> str:
 def _extract_plan(
     file_bytes: bytes,
     mime_type: str,
-    language: Literal["en", "bn", "hi"],
+    language: Literal["en", "bn", "hi", "kn"],
     client_factory: Callable[..., genai.Client] = genai.Client,
 ) -> DischargePlan:
     _load_env()
@@ -152,7 +152,7 @@ def _extract_plan(
 async def extract_plan(
     file_bytes: bytes,
     mime_type: str,
-    language: Literal["en", "bn", "hi"],
+    language: Literal["en", "bn", "hi", "kn"],
 ) -> DischargePlan:
     try:
         return await asyncio.wait_for(

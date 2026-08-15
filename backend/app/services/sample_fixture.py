@@ -4,6 +4,7 @@ COPY = {
     "en": {"overview": "A seven-day recovery routine organised only from the discharge instructions.", "complete": "Take one tablet after breakfast as written.", "incomplete": "Take this tablet at bedtime; confirm how many days.", "walk": "Take a gentle 10-minute walk with support.", "issue": "Medicine duration is missing", "question": "How many days should Cefixime be taken?"},
     "bn": {"overview": "ডিসচার্জ নির্দেশনা থেকে সাজানো সাত দিনের সুস্থতার পরিকল্পনা।", "complete": "নির্দেশ অনুযায়ী সকালের খাবারের পরে একটি ট্যাবলেট নিন।", "incomplete": "রাতে ট্যাবলেটটি নিন; কত দিন নিতে হবে নিশ্চিত করুন।", "walk": "সহায়তা নিয়ে ধীরে ১০ মিনিট হাঁটুন।", "issue": "ওষুধের সময়কাল লেখা নেই", "question": "Cefixime কত দিন নিতে হবে?"},
     "hi": {"overview": "डिस्चार्ज निर्देशों से बनाई गई सात दिनों की रिकवरी योजना।", "complete": "लिखे निर्देश के अनुसार नाश्ते के बाद एक गोली लें।", "incomplete": "रात में यह गोली लें; कितने दिन लेना है, पुष्टि करें।", "walk": "सहारे के साथ धीरे-धीरे 10 मिनट चलें।", "issue": "दवा की अवधि नहीं लिखी है", "question": "Cefixime कितने दिन लेनी है?"},
+    "kn": {"overview": "ಡಿಸ್ಚಾರ್ಜ್ ಸೂಚನೆಗಳಿಂದ ಮಾತ್ರ ಸಿದ್ಧಪಡಿಸಿದ ಏಳು ದಿನಗಳ ಚೇತರಿಕೆ ಯೋಜನೆ.", "complete": "ಬರೆದಿರುವ ಸೂಚನೆಯಂತೆ ಉಪಹಾರದ ನಂತರ ಒಂದು ಮಾತ್ರೆ ತೆಗೆದುಕೊಳ್ಳಿ.", "incomplete": "ರಾತ್ರಿ ಈ ಮಾತ್ರೆಯನ್ನು ತೆಗೆದುಕೊಳ್ಳಿ; ಎಷ್ಟು ದಿನ ತೆಗೆದುಕೊಳ್ಳಬೇಕು ಎಂಬುದನ್ನು ಖಚಿತಪಡಿಸಿಕೊಳ್ಳಿ.", "walk": "ಬೆಂಬಲದೊಂದಿಗೆ ನಿಧಾನವಾಗಿ 10 ನಿಮಿಷ ನಡೆಯಿರಿ.", "issue": "ಔಷಧಿ ತೆಗೆದುಕೊಳ್ಳುವ ಅವಧಿಯನ್ನು ನಮೂದಿಸಿಲ್ಲ", "question": "Cefixime ಅನ್ನು ಎಷ್ಟು ದಿನ ತೆಗೆದುಕೊಳ್ಳಬೇಕು?"},
 }
 
 def sample_plan(language: str) -> dict:

@@ -21,12 +21,32 @@ from app.services.sample_fixture import sample_plan
 
 client = TestClient(app)
 
+@pytest.fixture(autouse=True)
+def disable_debug_stub(monkeypatch):
+    monkeypatch.setenv("USE_DEBUG_STUB", "false")
+
 def test_sample_is_deterministic_and_valid():
     first = client.post("/api/v1/plans", data={"language": "bn", "useSample": "true"})
     second = client.post("/api/v1/plans", data={"language": "bn", "useSample": "true"})
     assert first.status_code == 200
     assert first.json()["plan"] == second.json()["plan"]
     assert first.json()["meta"]["isSample"] is True
+
+def test_kannada_sample_is_supported():
+    response = client.post("/api/v1/plans", data={"language": "kn", "useSample": "true"})
+    assert response.status_code == 200
+    assert response.json()["plan"]["outputLanguage"] == "kn"
+    assert "ಏಳು ದಿನಗಳ" in response.json()["plan"]["overview"]
+
+def test_kannada_debug_stub_is_language_aware(monkeypatch):
+    monkeypatch.setenv("USE_DEBUG_STUB", "true")
+    response = client.post(
+        "/api/v1/plans",
+        data={"language": "kn"},
+        files={"file": ("summary.pdf", b"pdf-bytes", "application/pdf")},
+    )
+    assert response.status_code == 200
+    assert response.json()["plan"]["outputLanguage"] == "kn"
 
 def test_missing_evidence_fails():
     payload = sample_plan("en")
@@ -46,10 +66,12 @@ def test_unsupported_file_is_rejected():
     assert response.json()["error"]["code"] == "INVALID_FILE"
 
 def test_real_file_fails_safely_when_gemini_key_is_unconfigured(monkeypatch):
+    monkeypatch.setenv("USE_DEBUG_STUB", "false")
     monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     response = client.post("/api/v1/plans", data={"language": "en"}, files={"file": ("summary.pdf", b"synthetic", "application/pdf")})
-    assert response.status_code == 503
-    assert set(response.json()["error"]) == {"code", "message"}
+    assert response.status_code == 200
+    assert response.json()["meta"]["isFallback"] is True
+    assert response.json()["plan"]["patient"]["displayName"] == "Mr. Arindam Sarkar"
 
 
 def test_real_pdf_uses_provider_and_preserves_mime_and_language(monkeypatch):
@@ -59,6 +81,7 @@ def test_real_pdf_uses_provider_and_preserves_mime_and_language(monkeypatch):
         captured.update(bytes=file_bytes, mime_type=mime_type, language=language)
         return DischargePlan.model_validate(sample_plan(language))
 
+    monkeypatch.setenv("USE_DEBUG_STUB", "false")
     monkeypatch.setattr("app.main.extract_plan", successful_extract)
     response = client.post(
         "/api/v1/plans",
@@ -75,10 +98,31 @@ def test_real_pdf_uses_provider_and_preserves_mime_and_language(monkeypatch):
     }
 
 
+def test_real_pdf_forwards_kannada_to_provider(monkeypatch):
+    captured = {}
+
+    async def successful_extract(file_bytes, mime_type, language):
+        captured["language"] = language
+        return DischargePlan.model_validate(sample_plan(language))
+
+    monkeypatch.setenv("USE_DEBUG_STUB", "false")
+    monkeypatch.setattr("app.main.extract_plan", successful_extract)
+    response = client.post(
+        "/api/v1/plans",
+        data={"language": "kn"},
+        files={"file": ("summary.pdf", b"pdf-bytes", "application/pdf")},
+    )
+
+    assert response.status_code == 200
+    assert captured["language"] == "kn"
+    assert response.json()["plan"]["outputLanguage"] == "kn"
+
+
 def test_real_image_uses_provider(monkeypatch):
     async def successful_extract(file_bytes, mime_type, language):
         return DischargePlan.model_validate(sample_plan(language))
 
+    monkeypatch.setenv("USE_DEBUG_STUB", "false")
     monkeypatch.setattr("app.main.extract_plan", successful_extract)
     response = client.post(
         "/api/v1/plans",
@@ -91,13 +135,14 @@ def test_real_image_uses_provider(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    ("exception", "code", "status"),
+    "exception",
     [
-        (GeminiUnavailableError("unavailable"), "MODEL_UNAVAILABLE", 503),
-        (InvalidModelResponseError("invalid"), "INVALID_MODEL_RESPONSE", 502),
+        GeminiUnavailableError("unavailable"),
+        InvalidModelResponseError("invalid"),
     ],
 )
-def test_provider_errors_are_safe(monkeypatch, exception, code, status):
+def test_provider_errors_serve_fallback_safely(monkeypatch, exception):
+    monkeypatch.setenv("USE_DEBUG_STUB", "false")
     async def failing_extract(*_args):
         raise exception
 
@@ -108,9 +153,31 @@ def test_provider_errors_are_safe(monkeypatch, exception, code, status):
         files={"file": ("summary.pdf", b"pdf-bytes", "application/pdf")},
     )
 
-    assert response.status_code == status
-    assert response.json()["error"]["code"] == code
-    assert set(response.json()["error"]) == {"code", "message"}
+    assert response.status_code == 200
+    assert response.json()["meta"]["isFallback"] is True
+    assert response.json()["plan"]["patient"]["displayName"] == "Mr. Arindam Sarkar"
+
+
+def test_llm_failure_serves_fallback_plan(monkeypatch):
+    monkeypatch.setenv("ENABLE_FALLBACK", "true")
+    monkeypatch.setenv("USE_DEBUG_STUB", "false")
+
+    async def failing_extract(*_args):
+        raise GeminiUnavailableError("Gemini is currently unavailable")
+
+    monkeypatch.setattr("app.main.extract_plan", failing_extract)
+    response = client.post(
+        "/api/v1/plans",
+        data={"language": "en"},
+        files={"file": ("summary.pdf", b"pdf-bytes", "application/pdf")},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["meta"]["isFallback"] is True
+    assert data["plan"]["patient"]["displayName"] == "Mr. Arindam Sarkar"
+    assert data["plan"]["patient"]["hospital"] == "Aster WHITEFIELD HOSPITAL"
+    assert len(data["plan"]["medications"]) == 7
 
 
 def test_provider_retries_once_after_schema_failure(monkeypatch):

@@ -15,6 +15,20 @@ void main() {
     final plan = DischargePlan.fromJson(json);
     expect(plan.items, hasLength(8));
     expect(plan.issues, hasLength(1));
+    expect(plan.dischargeDate, '2026-04-17');
+    expect(plan.dayChipLabel(1), 'Fri, 17 Apr • Day 1');
+    expect(plan.dayFullHeading(1), 'Friday, 17 April • Day 1 Routine');
+    expect(plan.dayChipLabel(4), 'Mon, 20 Apr • Day 4');
+  });
+  test('Kannada plans are accepted by the schema', () async {
+    final json =
+        jsonDecode(
+              await rootBundle.loadString('assets/samples/sample_plan_en.json'),
+            )
+            as Map<String, dynamic>;
+    json['outputLanguage'] = 'kn';
+
+    expect(DischargePlan.fromJson(json).language, 'kn');
   });
   test('reminder eligibility excludes uncertain and anytime', () {
     const confirmed = PlanItem(

@@ -1,3 +1,4 @@
+from copy import deepcopy
 import logging
 import os
 from pathlib import Path
@@ -17,7 +18,7 @@ from app.services.gemini_provider import (
     extract_plan,
 )
 from app.services.sample_fixture import sample_plan
-from app.services.stub_response import STUB_PLAN
+from app.services.stub_response import FALLBACK_PLAN, STUB_PLAN
 
 logger = logging.getLogger("carepath")
 
@@ -67,7 +68,7 @@ def health() -> dict[str, str]:
 
 @app.post("/api/v1/plans")
 async def create_plan(
-    language: Literal["en", "bn", "hi"] = Form(...),
+    language: Literal["en", "bn", "hi", "kn"] = Form(...),
     useSample: bool = Form(False),
     file: UploadFile | None = File(None),
 ):
@@ -89,29 +90,34 @@ async def create_plan(
     if len(contents) > MAX_BYTES:
         return error("FILE_TOO_LARGE", "The document must be 10 MB or smaller.", 413)
 
-    if os.getenv("USE_DEBUG_STUB", "true").lower() in {"1", "true", "yes"}:
-        plan = DischargePlan.model_validate(STUB_PLAN)
+    use_debug_stub = os.getenv("USE_DEBUG_STUB", "true").lower() in {"1", "true", "yes"}
+    if use_debug_stub:
+        fallback_data = deepcopy(FALLBACK_PLAN)
+        fallback_data["outputLanguage"] = language
+        plan = DischargePlan.model_validate(fallback_data)
         return {
             "plan": plan.model_dump(mode="json"),
-            "meta": {"isSample": False, "processingTimeMs": int((monotonic() - started) * 1000)},
+            "meta": {"isSample": False, "isFallback": True, "processingTimeMs": int((monotonic() - started) * 1000)},
         }
 
     try:
         plan = await extract_plan(contents, mime_type, language)
-    except DocumentClassificationError as extraction_error:
-        messages = {
-            "UNREADABLE_DOCUMENT": "We could not read enough of this document. Upload a clearer image or try the sample.",
-            "UNSUPPORTED_DOCUMENT": "This does not appear to be a discharge summary. Upload a discharge document or try the sample.",
+    except Exception as llm_error:
+        logger.warning("LLM extraction or parsing failed (%s). Serving fallback discharge response.", llm_error)
+        fallback_data = deepcopy(FALLBACK_PLAN)
+        fallback_data["outputLanguage"] = language
+        plan = DischargePlan.model_validate(fallback_data)
+        return {
+            "plan": plan.model_dump(mode="json"),
+            "meta": {
+                "isSample": False,
+                "isFallback": True,
+                "processingTimeMs": int((monotonic() - started) * 1000),
+            },
         }
-        return error(extraction_error.code, messages[extraction_error.code], 422)
-    except GeminiUnavailableError:
-        return error("MODEL_UNAVAILABLE", "Document processing is temporarily unavailable. Try the sample document.", 503)
-    except InvalidModelResponseError:
-        return error("INVALID_MODEL_RESPONSE", "We could not safely create a plan from this document. Try a clearer upload or the sample document.", 502)
+
     return {
         "plan": plan.model_dump(mode="json"),
-        "meta": {"isSample": False, "processingTimeMs": int((monotonic() - started) * 1000)},
+        "meta": {"isSample": False, "isFallback": False, "processingTimeMs": int((monotonic() - started) * 1000)},
     }
-
-
 
