@@ -3,53 +3,106 @@
   "documentType": "discharge_summary",
   "outputLanguage": "en",
   "patient": {
-    "displayName": "Aarav",
-    "dischargeDate": "2026-08-15",
-    "hospital": "Swasthya Demo Hospital",
-    "department": "General Medicine",
-    "primaryConditionAsWritten": "Recovery after fever"
+    "displayName": "Mr. Arindam Sarkar",
+    "dischargeDate": "2026-04-17",
+    "hospital": "Aster Whitefield Hospital",
+    "department": "DEPARTMENT OF INTERNAL MEDICINE",
+    "primaryConditionAsWritten": "ACUTE DYSENTRY WITH MODERATE DEHYDRATION"
   },
-  "overview": "A seven-day recovery routine organised only from the discharge instructions.",
+  "overview": "Mr. Arindam Sarkar, a 35-year-old male, was admitted with complaints of loose stools, stomach pain, cramping, vomiting, and lethargy following outside food consumption. He was diagnosed with acute dysentery with moderate dehydration. He received IV antibiotics, fluids, antacids, and antipyretics in the hospital. He is now symptomatically better, hemodynamically stable, and discharged home on oral medications with instructions for follow-up.",
   "medications": [
     {
-      "id": "med-paracetamol",
-      "name": "Paracetamol",
-      "dose": "500 mg",
-      "route": "oral",
-      "frequency": "once daily after breakfast",
+      "sourceEvidence": "TAB TAXIM-O 500MG 1-0-1 X 4 DAYS AFTER FOOD",
+      "page": 3,
+      "confidence": "high",
+      "status": "confirmed_from_source",
+      "uncertaintyReason": null,
+      "id": "med_1",
+      "name": "TAXIM-O",
+      "dose": "500MG",
+      "route": null,
+      "frequency": "1-0-1",
+      "timing": [
+        "morning",
+        "evening"
+      ],
+      "duration": "4 DAYS",
+      "specialInstructions": "AFTER FOOD",
+      "simplifiedInstruction": "Take 1 tablet of Taxim-O 500mg in the morning and 1 tablet in the evening after food for 4 days.",
+      "applicableDays": [
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "sourceEvidence": "TAB METROGYL 400MG 1-0-1 X 4 DAYS AFTER FOOD",
+      "page": 3,
+      "confidence": "high",
+      "status": "confirmed_from_source",
+      "uncertaintyReason": null,
+      "id": "med_2",
+      "name": "METROGYL",
+      "dose": "400MG",
+      "route": null,
+      "frequency": "1-0-1",
+      "timing": [
+        "morning",
+        "evening"
+      ],
+      "duration": "4 DAYS",
+      "specialInstructions": "AFTER FOOD",
+      "simplifiedInstruction": "Take 1 tablet of Metrogyl 400mg in the morning and 1 tablet in the evening after food for 4 days.",
+      "applicableDays": [
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "sourceEvidence": "CAP SOMPRAZ D 40MG 1-0-0 X 5 DAYS BEFORE FOOD",
+      "page": 3,
+      "confidence": "high",
+      "status": "confirmed_from_source",
+      "uncertaintyReason": null,
+      "id": "med_3",
+      "name": "SOMPRAZ D",
+      "dose": "40MG",
+      "route": null,
+      "frequency": "1-0-0",
       "timing": [
         "morning"
       ],
-      "duration": "7 days",
-      "specialInstructions": "After food",
-      "simplifiedInstruction": "Take one tablet after breakfast as written.",
+      "duration": "5 DAYS",
+      "specialInstructions": "BEFORE FOOD",
+      "simplifiedInstruction": "Take 1 capsule of Sompraz D 40mg in the morning before food for 5 days.",
       "applicableDays": [
         1,
         2,
         3,
         4,
-        5,
-        6,
-        7
-      ],
-      "sourceEvidence": "Tab Paracetamol 500 mg orally once daily after breakfast for 7 days.",
-      "page": 1,
-      "confidence": "high",
-      "status": "confirmed_from_source",
-      "uncertaintyReason": null
+        5
+      ]
     },
     {
-      "id": "med-cefixime",
-      "name": "Cefixime",
-      "dose": "200 mg",
-      "route": "oral",
-      "frequency": "at bedtime",
+      "sourceEvidence": "TAB DOLO 650MG SOS IF FEVER/ PAIN",
+      "page": 3,
+      "confidence": "high",
+      "status": "confirmed_from_source",
+      "uncertaintyReason": null,
+      "id": "med_4",
+      "name": "DOLO",
+      "dose": "650MG",
+      "route": null,
+      "frequency": "SOS",
       "timing": [
-        "bedtime"
+        "anytime"
       ],
       "duration": null,
-      "specialInstructions": null,
-      "simplifiedInstruction": "Take this tablet at bedtime; confirm how many days.",
+      "specialInstructions": "IF FEVER/ PAIN",
+      "simplifiedInstruction": "Take 1 tablet of Dolo 650mg as needed if you experience fever or pain.",
       "applicableDays": [
         1,
         2,
@@ -58,21 +111,97 @@
         5,
         6,
         7
+      ]
+    },
+    {
+      "sourceEvidence": "TAB EMESET 4MG S0S IF NAUSEA/ VOMITING",
+      "page": 3,
+      "confidence": "high",
+      "status": "confirmed_from_source",
+      "uncertaintyReason": null,
+      "id": "med_5",
+      "name": "EMESET",
+      "dose": "4MG",
+      "route": null,
+      "frequency": "SOS",
+      "timing": [
+        "anytime"
       ],
-      "sourceEvidence": "Tab Cefixime 200 mg orally at bedtime. Duration: —",
-      "page": 1,
-      "confidence": "medium",
-      "status": "needs_confirmation",
-      "uncertaintyReason": "Duration is absent from the source."
+      "duration": null,
+      "specialInstructions": "IF NAUSEA/ VOMITING",
+      "simplifiedInstruction": "Take 1 tablet of Emeset 4mg as needed if you experience nausea or vomiting.",
+      "applicableDays": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    },
+    {
+      "sourceEvidence": "CAP VSL #3 1-1-1 x 3 DAYS",
+      "page": 3,
+      "confidence": "high",
+      "status": "confirmed_from_source",
+      "uncertaintyReason": null,
+      "id": "med_6",
+      "name": "VSL #3",
+      "dose": null,
+      "route": null,
+      "frequency": "1-1-1",
+      "timing": [
+        "morning",
+        "afternoon",
+        "evening"
+      ],
+      "duration": "3 DAYS",
+      "specialInstructions": null,
+      "simplifiedInstruction": "Take 1 capsule of VSL #3 three times a day (morning, afternoon, and evening) for 3 days.",
+      "applicableDays": [
+        1,
+        2,
+        3
+      ]
+    },
+    {
+      "sourceEvidence": "TAB COLOSPA RETARD 200MG BD X 3 DAYS",
+      "page": 3,
+      "confidence": "high",
+      "status": "confirmed_from_source",
+      "uncertaintyReason": null,
+      "id": "med_7",
+      "name": "COLOSPA RETARD",
+      "dose": "200MG",
+      "route": null,
+      "frequency": "BD",
+      "timing": [
+        "morning",
+        "evening"
+      ],
+      "duration": "3 DAYS",
+      "specialInstructions": null,
+      "simplifiedInstruction": "Take 1 tablet of Colospa Retard 200mg twice a day (morning and evening) for 3 days.",
+      "applicableDays": [
+        1,
+        2,
+        3
+      ]
     }
   ],
   "careInstructions": [
     {
-      "id": "care-walk",
-      "category": "activity",
-      "instruction": "Walk gently for 10 minutes with support daily.",
-      "simplifiedInstruction": "Take a gentle 10-minute walk with support.",
-      "timing": "afternoon",
+      "sourceEvidence": "Diabetic diet",
+      "page": 2,
+      "confidence": "high",
+      "status": "confirmed_from_source",
+      "uncertaintyReason": null,
+      "id": "care_1",
+      "category": "diet",
+      "instruction": "Follow a diabetic diet.",
+      "simplifiedInstruction": "Follow a diabetic diet as advised.",
+      "timing": "anytime",
       "applicableDays": [
         1,
         2,
@@ -81,69 +210,93 @@
         5,
         6,
         7
-      ],
-      "sourceEvidence": "Activity: gentle 10-minute supported walk daily.",
-      "page": 2,
-      "confidence": "high",
-      "status": "confirmed_from_source",
-      "uncertaintyReason": null
+      ]
     }
   ],
   "followUps": [
     {
-      "id": "followup-1",
-      "type": "appointment",
-      "title": "General Medicine review",
-      "date": null,
-      "relativeTiming": "One week after discharge",
-      "locationOrDepartment": "General Medicine OPD",
-      "preparation": null,
-      "sourceEvidence": "Follow up in General Medicine OPD one week after discharge.",
+      "sourceEvidence": "In Internal Medicine OPD on Tuesday 21/04/2026 with CBC, CRP KFT and culture reports",
       "page": 2,
       "confidence": "high",
       "status": "confirmed_from_source",
-      "uncertaintyReason": null
+      "uncertaintyReason": null,
+      "id": "fu_1",
+      "type": "appointment",
+      "title": "Internal Medicine OPD Follow-up",
+      "date": "2026-04-21",
+      "relativeTiming": "Tuesday 21/04/2026",
+      "locationOrDepartment": "Internal Medicine OPD",
+      "preparation": "Bring CBC, CRP, KFT, and culture reports"
+    },
+    {
+      "sourceEvidence": "Collect culture reports",
+      "page": 2,
+      "confidence": "high",
+      "status": "confirmed_from_source",
+      "uncertaintyReason": null,
+      "id": "fu_2",
+      "type": "test",
+      "title": "Collect culture reports",
+      "date": null,
+      "relativeTiming": "Pending follow-up",
+      "locationOrDepartment": null,
+      "preparation": null
+    },
+    {
+      "sourceEvidence": "CBC, KFT, CRP to be done on follow up",
+      "page": 2,
+      "confidence": "high",
+      "status": "confirmed_from_source",
+      "uncertaintyReason": null,
+      "id": "fu_3",
+      "type": "test",
+      "title": "CBC, KFT, CRP tests",
+      "date": null,
+      "relativeTiming": "On follow up",
+      "locationOrDepartment": null,
+      "preparation": null
     }
   ],
   "warningSigns": [
     {
-      "id": "warning-1",
-      "sign": "Fever above 102°F",
-      "action": "Contact the care team",
-      "sourceEvidence": "Seek help if fever rises above 102°F.",
+      "sourceEvidence": "Report to the ER in case of worsening of symptoms",
       "page": 2,
       "confidence": "high",
       "status": "confirmed_from_source",
-      "uncertaintyReason": null
+      "uncertaintyReason": null,
+      "id": "ws_1",
+      "sign": "Worsening of symptoms",
+      "action": "Report to the Emergency Room (ER)"
     },
     {
-      "id": "warning-2",
-      "sign": "Difficulty breathing",
-      "action": "Seek urgent care",
-      "sourceEvidence": "Seek urgent care for difficulty breathing.",
+      "sourceEvidence": "Report immediately in case of reaction to any of the medications",
       "page": 2,
       "confidence": "high",
       "status": "confirmed_from_source",
-      "uncertaintyReason": null
+      "uncertaintyReason": null,
+      "id": "ws_2",
+      "sign": "Reaction to any of the medications",
+      "action": "Report immediately"
+    },
+    {
+      "sourceEvidence": "In case of high grade fever, breathlessness, severe dehydration, severe pain, dizziness",
+      "page": 2,
+      "confidence": "high",
+      "status": "confirmed_from_source",
+      "uncertaintyReason": null,
+      "id": "ws_3",
+      "sign": "High grade fever, breathlessness, severe dehydration, severe pain, or dizziness",
+      "action": "Obtain urgent care"
     }
   ],
   "confirmationIssues": [
     {
-      "id": "issue-duration",
-      "severity": "important",
-      "title": "Medicine duration is missing",
-      "questionForCareTeam": "How many days should Cefixime be taken?",
-      "sourceEvidence": "Tab Cefixime 200 mg orally at bedtime. Duration: —"
-    },
-    {
-      "id": "issue-illegible",
+      "id": "issue_1",
       "severity": "advisory",
-      "title": "One handwritten line is unclear",
-      "questionForCareTeam": "Please ask the care team to explain the handwritten instruction.",
-      "sourceEvidence": "[illegible handwritten line]"
+      "title": "Diabetes Management Plan",
+      "questionForCareTeam": "The patient was found to have elevated blood sugar levels during admission but insisted on dietary modification alone without diabetes medications. Should blood sugar levels be reassessed during the follow-up visit on 21/04/2026?",
+      "sourceEvidence": "His blood sugars were monitored regularly which were found to be elevated hence dietary modifications and medications were advised; however, the patient insisted on dietary modification alone."
     }
   ],
-  "extractionWarnings": [
-    "One handwritten line was not converted into an instruction."
-  ]
+  "extractionWarnings": []
 }

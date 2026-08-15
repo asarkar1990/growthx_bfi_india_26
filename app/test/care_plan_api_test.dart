@@ -68,7 +68,7 @@ void main() {
         fileBytes: Uint8List.fromList([1, 2, 3]),
       );
 
-      expect(plan.patientName, 'Aarav');
+      expect(plan.patientName, 'Mr. Arindam Sarkar');
       expect(plan.language, 'en');
       expect(plan.items.isNotEmpty, isTrue);
     });

@@ -13,8 +13,8 @@ void main() {
             )
             as Map<String, dynamic>;
     final plan = DischargePlan.fromJson(json);
-    expect(plan.items, hasLength(3));
-    expect(plan.issues, hasLength(2));
+    expect(plan.items, hasLength(8));
+    expect(plan.issues, hasLength(1));
   });
   test('reminder eligibility excludes uncertain and anytime', () {
     const confirmed = PlanItem(

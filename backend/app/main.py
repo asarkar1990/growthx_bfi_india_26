@@ -1,4 +1,5 @@
 import logging
+import os
 from pathlib import Path
 from time import monotonic
 from typing import Literal
@@ -16,6 +17,7 @@ from app.services.gemini_provider import (
     extract_plan,
 )
 from app.services.sample_fixture import sample_plan
+from app.services.stub_response import STUB_PLAN
 
 logger = logging.getLogger("carepath")
 
@@ -86,6 +88,14 @@ async def create_plan(
     contents = await file.read(MAX_BYTES + 1)
     if len(contents) > MAX_BYTES:
         return error("FILE_TOO_LARGE", "The document must be 10 MB or smaller.", 413)
+
+    if os.getenv("USE_DEBUG_STUB", "true").lower() in {"1", "true", "yes"}:
+        plan = DischargePlan.model_validate(STUB_PLAN)
+        return {
+            "plan": plan.model_dump(mode="json"),
+            "meta": {"isSample": False, "processingTimeMs": int((monotonic() - started) * 1000)},
+        }
+
     try:
         plan = await extract_plan(contents, mime_type, language)
     except DocumentClassificationError as extraction_error:

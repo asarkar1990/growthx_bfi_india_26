@@ -32,7 +32,7 @@ void main() {
     },
     verify: (c) {
       expect(c.state.phase, CarePlanPhase.ready);
-      expect(c.state.plan?.patientName, 'Aarav');
+      expect(c.state.plan?.patientName, 'Mr. Arindam Sarkar');
     },
   );
 
@@ -82,7 +82,7 @@ void main() {
     },
     verify: (c) {
       expect(c.state.phase, CarePlanPhase.ready);
-      expect(c.state.plan?.patientName, 'Aarav');
+      expect(c.state.plan?.patientName, 'Mr. Arindam Sarkar');
     },
   );
 
