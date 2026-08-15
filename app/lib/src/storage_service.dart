@@ -208,12 +208,15 @@ class CarePlanStorage {
       },
       'overview': plan.overview,
       'medications': plan.items
+          .where((i) => i.isMedication)
           .map(
             (i) => {
               'id': i.id,
               'name': i.title,
               'simplifiedInstruction': i.instruction,
-              'timing': [i.timing.name],
+              'timing': i.effectiveTimings
+                  .map((timing) => timing.name)
+                  .toList(),
               'applicableDays': i.days,
               'sourceEvidence': i.evidence,
               'status': i.status == ItemStatus.confirmedFromSource
@@ -224,14 +227,35 @@ class CarePlanStorage {
             },
           )
           .toList(),
-      'careInstructions': <Map<String, dynamic>>[],
+      'careInstructions': plan.items
+          .where((i) => !i.isMedication)
+          .map(
+            (i) => {
+              'id': i.id,
+              'category': 'activity',
+              'instruction': i.detail ?? i.instruction,
+              'simplifiedInstruction': i.instruction,
+              'timing': i.timing.name,
+              'applicableDays': i.days,
+              'sourceEvidence': i.evidence,
+              'status': i.status == ItemStatus.confirmedFromSource
+                  ? 'confirmed_from_source'
+                  : 'needs_confirmation',
+              'confidence': 'high',
+              'uncertaintyReason': i.uncertaintyReason,
+            },
+          )
+          .toList(),
       'followUps': plan.followUps
           .map(
             (f) => {
               'id': f.title,
-              'type': 'appointment',
+              'type': f.type ?? 'appointment',
               'title': f.title,
               'relativeTiming': f.subtitle,
+              'date': f.date,
+              'locationOrDepartment': f.location,
+              'preparation': f.preparation,
               'sourceEvidence': f.evidence,
               'status': 'confirmed_from_source',
               'confidence': 'high',

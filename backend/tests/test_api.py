@@ -1,8 +1,10 @@
 import json
 import os
 import asyncio
+from datetime import datetime, timedelta
 from pathlib import Path
 import time
+from zoneinfo import ZoneInfo
 
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
@@ -46,7 +48,15 @@ def test_kannada_debug_stub_is_language_aware(monkeypatch):
         files={"file": ("summary.pdf", b"pdf-bytes", "application/pdf")},
     )
     assert response.status_code == 200
-    assert response.json()["plan"]["outputLanguage"] == "kn"
+    plan = response.json()["plan"]
+    yesterday = datetime.now(ZoneInfo("Asia/Kolkata")).date() - timedelta(days=1)
+    assert plan["outputLanguage"] == "kn"
+    assert plan["patient"]["dischargeDate"] == yesterday.isoformat()
+    assert all(2 in medication["applicableDays"] for medication in plan["medications"])
+    assert all(
+        any(day > 2 for day in medication["applicableDays"])
+        for medication in plan["medications"]
+    )
 
 def test_missing_evidence_fails():
     payload = sample_plan("en")

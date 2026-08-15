@@ -103,6 +103,14 @@ void main() {
 
       // Full plan screen is displayed
       expect(find.text('Mr. Arindam Sarkar’s Recovery Plan'), findsOneWidget);
+      expect(find.text('NEXT UP'), findsOneWidget);
+      expect(find.byKey(const Key('next-action-card')), findsOneWidget);
+      expect(find.text('Full recovery plan'), findsOneWidget);
+      expect(find.text('Doctor’s Discharge Summary'), findsNothing);
+
+      await tester.tap(find.text('Full recovery plan'));
+      await tester.pumpAndSettle();
+
       expect(find.text('Fri, 17 Apr • Day 1'), findsOneWidget);
       expect(find.text('Friday, 17 April • Day 1 Routine'), findsOneWidget);
       expect(find.text('Doctor’s Discharge Summary'), findsOneWidget);
@@ -111,6 +119,54 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('next-up cards swipe through upcoming actions', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final currentPlan =
+        jsonDecode(jsonEncode(sampleMap)) as Map<String, dynamic>;
+    final yesterday = DateTime.now().subtract(const Duration(days: 1));
+    (currentPlan['patient'] as Map<String, dynamic>)['dischargeDate'] =
+        '${yesterday.year.toString().padLeft(4, '0')}-'
+        '${yesterday.month.toString().padLeft(2, '0')}-'
+        '${yesterday.day.toString().padLeft(2, '0')}';
+    final client = MockClient(
+      (request) async => http.Response(
+        jsonEncode({
+          'plan': currentPlan,
+          'meta': {'isSample': true},
+        }),
+        200,
+        headers: {'content-type': 'application/json'},
+      ),
+    );
+    final cubit = CarePlanCubit(
+      api: CarePlanApi(httpClient: client, baseUrl: 'http://127.0.0.1:8000'),
+      storage: CarePlanStorage(),
+    );
+
+    await tester.pumpWidget(CarePathApp(cubit: cubit));
+    cubit.useSample();
+    unawaited(cubit.createPlan(stageDelay: const Duration(milliseconds: 10)));
+    await tester.pump(const Duration(milliseconds: 15));
+    await tester.pump(const Duration(milliseconds: 15));
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.ensureVisible(find.text('Confirm & Activate Recovery Plan'));
+    await tester.tap(find.text('Confirm & Activate Recovery Plan'));
+    await tester.pumpAndSettle();
+
+    final carousel = find.byKey(const Key('next-actions-carousel'));
+    expect(carousel, findsOneWidget);
+    expect(find.bySemanticsLabel('Upcoming action 1 of 5'), findsOneWidget);
+
+    await tester.drag(carousel, const Offset(-320, 0));
+    await tester.pumpAndSettle();
+
+    expect(find.bySemanticsLabel('Upcoming action 2 of 5'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'bottom bar navigates to history and displays active plan badge',

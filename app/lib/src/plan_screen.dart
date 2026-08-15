@@ -19,135 +19,618 @@ class PlanScreen extends StatelessWidget {
     }
     final plan = state.plan!;
     return PageShell(
-      child: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Expanded(child: Brand()),
-                      OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          side: const BorderSide(color: Color(0xFF38295E)),
-                        ),
-                        onPressed: context.read<CarePlanCubit>().startNewUpload,
-                        icon: const Icon(Icons.upload_file_rounded, size: 16),
-                        label: const Text(
-                          'Upload New',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ),
-                    ],
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 40),
+        children: [
+          Row(
+            children: [
+              const Expanded(child: Brand()),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
                   ),
-                  const SizedBox(height: 18),
-                  Text(
-                    '${plan.patientName}’s Recovery Plan',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${plan.hospital} • 7-day schedule',
-                    style: const TextStyle(
-                      color: Color(0xFF9C93AC),
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  _CollapsibleOverview(overview: plan.overview),
-                  if (plan.issues.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    _CollapsibleConfirmationPanel(issues: plan.issues),
-                  ],
-                  const SizedBox(height: 16),
-                ],
+                  side: const BorderSide(color: Color(0xFF38295E)),
+                ),
+                onPressed: context.read<CarePlanCubit>().startNewUpload,
+                icon: const Icon(Icons.upload_file_rounded, size: 16),
+                label: const Text('Upload New', style: TextStyle(fontSize: 12)),
               ),
-            ),
+            ],
           ),
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _DayHeader(
-              plan: plan,
-              selected: state.selectedDay,
-              onSelected: context.read<CarePlanCubit>().selectDay,
-            ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 40),
-            sliver: SliverList.list(
-              children: [
-                _DayTimeline(plan: plan, day: state.selectedDay),
-                const SizedBox(height: 28),
-                _EvidenceSection(
-                  title: 'Follow-ups & tests',
-                  icon: Icons.calendar_month_outlined,
-                  notes: plan.followUps,
-                ),
-                const SizedBox(height: 14),
-                _EvidenceSection(
-                  title: 'Warning signs from your document',
-                  icon: Icons.warning_amber_rounded,
-                  notes: plan.warnings,
-                  urgent: true,
-                ),
-                if (plan.extractionWarnings.isNotEmpty) ...[
-                  const SizedBox(height: 14),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(
-                            Icons.info_outline,
-                            color: AppTheme.amber,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              plan.extractionWarnings.join('\n'),
-                              style: const TextStyle(
-                                color: Color(0xFFD7C9A1),
-                                fontSize: 13,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 24),
-                FilledButton.icon(
-                  onPressed: context.read<CarePlanCubit>().showReminders,
-                  icon: const Icon(Icons.notifications_none_rounded),
-                  label: const Text('Review private reminders'),
-                ),
-                const SizedBox(height: 14),
-                const Text(
-                  'CarePath organises source instructions; it does not provide medical advice. Confirm unclear information with your care team.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF81798E),
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
+          const SizedBox(height: 18),
+          _CompactPlanIdentity(plan: plan),
+          const SizedBox(height: 16),
+          _NextActionsCarousel(plan: plan),
+          _NextHospitalVisitRow(plan: plan),
+          if (plan.warnings.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _UrgentWarningShortcut(warnings: plan.warnings),
+          ],
+          const SizedBox(height: 16),
+          _FullRecoveryPlanExpansion(
+            plan: plan,
+            selectedDay: state.selectedDay,
+            onDaySelected: context.read<CarePlanCubit>().selectDay,
+            onReviewReminders: context.read<CarePlanCubit>().showReminders,
           ),
         ],
       ),
     );
   }
+}
+
+class _NextActionsCarousel extends StatefulWidget {
+  const _NextActionsCarousel({required this.plan});
+
+  final DischargePlan plan;
+
+  @override
+  State<_NextActionsCarousel> createState() => _NextActionsCarouselState();
+}
+
+class _NextActionsCarouselState extends State<_NextActionsCarousel> {
+  late final PageController _controller;
+  int _selectedPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = PageController(viewportFraction: .94);
+  }
+
+  @override
+  void didUpdateWidget(covariant _NextActionsCarousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.plan != widget.plan) {
+      _selectedPage = 0;
+      if (_controller.hasClients) _controller.jumpToPage(0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final candidates = widget.plan.nextActions(DateTime.now(), limit: 100);
+    final actions = candidates
+        .where((action) => action.type == NextActionType.medication)
+        .take(5)
+        .toList();
+    if (actions.isEmpty) {
+      return const _NextActionPage(key: Key('next-action-card'), action: null);
+    }
+
+    return Column(
+      key: const Key('next-action-card'),
+      children: [
+        SizedBox(
+          height: 285,
+          child: PageView.builder(
+            key: const Key('next-actions-carousel'),
+            controller: _controller,
+            itemCount: actions.length,
+            onPageChanged: (page) => setState(() => _selectedPage = page),
+            itemBuilder: (context, index) => Padding(
+              padding: EdgeInsets.only(
+                right: index < actions.length - 1 ? 10 : 0,
+              ),
+              child: _NextActionPage(action: actions[index]),
+            ),
+          ),
+        ),
+        if (actions.length > 1) ...[
+          const SizedBox(height: 10),
+          Semantics(
+            label: 'Upcoming action ${_selectedPage + 1} of ${actions.length}',
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                actions.length,
+                (index) => AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: index == _selectedPage ? 20 : 7,
+                  height: 7,
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  decoration: BoxDecoration(
+                    color: index == _selectedPage
+                        ? const Color(0xFF5EEAD4)
+                        : const Color(0xFF3E6565),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _NextActionPage extends StatelessWidget {
+  const _NextActionPage({super.key, required this.action});
+
+  final NextAction? action;
+
+  @override
+  Widget build(BuildContext context) {
+    final currentAction = action;
+    const accentColor = Color(0xFF5EEAD4);
+    const badgeColor = Color(0xFF0B292D);
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF124A46), Color(0xFF102E36)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: accentColor, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: accentColor.withValues(alpha: .2),
+            blurRadius: 18,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'NEXT UP',
+                style: TextStyle(
+                  color: accentColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.4,
+                ),
+              ),
+              const Spacer(),
+              if (currentAction != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: badgeColor,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFF297E78)),
+                  ),
+                  child: Text(
+                    'MEDICATION',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: .7,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (currentAction == null) ...[
+            const Row(
+              children: [
+                Icon(
+                  Icons.check_circle_outline_rounded,
+                  color: Color(0xFF86EFAC),
+                  size: 30,
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'No upcoming scheduled actions',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Your current schedule has finished. Open the full plan to review instructions or warning signs.',
+              style: TextStyle(color: Color(0xFFA7D8D3), height: 1.4),
+            ),
+          ] else ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: badgeColor,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(Icons.medication_rounded, color: accentColor),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _nextActionDateLabel(
+                          currentAction.when,
+                          includeTime: true,
+                        ),
+                        style: TextStyle(
+                          color: accentColor,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        currentAction.title,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              currentAction.subtitle,
+              style: const TextStyle(
+                color: Color(0xFFE0F7F4),
+                fontSize: 14,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${_timingName(currentAction.timing!)} uses a suggested schedule time. Follow the exact instructions from your care team.',
+              style: const TextStyle(
+                color: Color(0xFFA7D8D3),
+                fontSize: 11.5,
+                height: 1.35,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _NextHospitalVisitRow extends StatelessWidget {
+  const _NextHospitalVisitRow({required this.plan});
+
+  final DischargePlan plan;
+
+  @override
+  Widget build(BuildContext context) {
+    final visits = plan
+        .nextActions(DateTime.now(), limit: 100)
+        .where((action) => action.type == NextActionType.hospitalVisit);
+    if (visits.isEmpty) return const SizedBox.shrink();
+    final visit = visits.first;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Container(
+        key: const Key('next-hospital-visit-row'),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF4B3A12), Color(0xFF2F250F)],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFFBBF24)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFF3B2F10),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.local_hospital_outlined,
+                color: Color(0xFFFBBF24),
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Text(
+                        'HOSPITAL VISIT',
+                        style: TextStyle(
+                          color: Color(0xFFFBBF24),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: .7,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        _nextActionDateLabel(visit.when, includeTime: false),
+                        style: const TextStyle(
+                          color: Color(0xFFFDE68A),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    visit.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFFFEF3C7),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    visit.subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFFD6B968),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CompactPlanIdentity extends StatelessWidget {
+  const _CompactPlanIdentity({required this.plan});
+
+  final DischargePlan plan;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      const Icon(Icons.person_outline_rounded, color: Color(0xFF9C93AC)),
+      const SizedBox(width: 10),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${plan.patientName}’s Recovery Plan',
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              plan.hospital,
+              style: const TextStyle(color: Color(0xFF9C93AC), fontSize: 12.5),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+class _UrgentWarningShortcut extends StatelessWidget {
+  const _UrgentWarningShortcut({required this.warnings});
+
+  final List<EvidenceNote> warnings;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: const Color(0xFF261414),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(14),
+      side: const BorderSide(color: Color(0xFF5A2929)),
+    ),
+    child: InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: const Color(0xFF171225),
+        builder: (sheetContext) => SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: _EvidenceSection(
+              title: 'Urgent warning signs',
+              icon: Icons.warning_amber_rounded,
+              notes: warnings,
+              urgent: true,
+              initiallyExpanded: true,
+            ),
+          ),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.warning_amber_rounded,
+              color: Color(0xFFFCA5A5),
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Urgent warning signs • ${warnings.length}',
+                style: const TextStyle(
+                  color: Color(0xFFFFC7C7),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            const Text(
+              'View',
+              style: TextStyle(
+                color: Color(0xFFFFC7C7),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(width: 2),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: Color(0xFFFFC7C7),
+              size: 18,
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _FullRecoveryPlanExpansion extends StatelessWidget {
+  const _FullRecoveryPlanExpansion({
+    required this.plan,
+    required this.selectedDay,
+    required this.onDaySelected,
+    required this.onReviewReminders,
+  });
+
+  final DischargePlan plan;
+  final int selectedDay;
+  final ValueChanged<int> onDaySelected;
+  final VoidCallback onReviewReminders;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    color: const Color(0xFF171225),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(18),
+      side: const BorderSide(color: Color(0xFF38295E)),
+    ),
+    child: Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        key: const Key('full-recovery-plan'),
+        initiallyExpanded: false,
+        maintainState: true,
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+        childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 18),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF2A1C52),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Icon(
+            Icons.fact_check_outlined,
+            color: AppTheme.lavender,
+            size: 20,
+          ),
+        ),
+        title: const Text(
+          'Full recovery plan',
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+        ),
+        subtitle: const Text(
+          'Medicines, daily routine, visits and source details',
+          style: TextStyle(color: Color(0xFF9C93AC), fontSize: 12),
+        ),
+        children: [
+          _CollapsibleOverview(overview: plan.overview),
+          if (plan.issues.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _CollapsibleConfirmationPanel(issues: plan.issues),
+          ],
+          const SizedBox(height: 14),
+          _DaySelector(
+            plan: plan,
+            selected: selectedDay,
+            onSelected: onDaySelected,
+          ),
+          const SizedBox(height: 18),
+          _DayTimeline(plan: plan, day: selectedDay),
+          const SizedBox(height: 24),
+          _EvidenceSection(
+            title: 'Follow-ups & tests',
+            icon: Icons.calendar_month_outlined,
+            notes: plan.followUps,
+          ),
+          const SizedBox(height: 12),
+          _EvidenceSection(
+            title: 'Warning signs from your document',
+            icon: Icons.warning_amber_rounded,
+            notes: plan.warnings,
+            urgent: true,
+          ),
+          if (plan.extractionWarnings.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.info_outline,
+                      color: AppTheme.amber,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        plan.extractionWarnings.join('\n'),
+                        style: const TextStyle(
+                          color: Color(0xFFD7C9A1),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 20),
+          FilledButton.icon(
+            onPressed: onReviewReminders,
+            icon: const Icon(Icons.notifications_none_rounded),
+            label: const Text('Review private reminders'),
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'CarePath organises source instructions; it does not provide medical advice. Confirm unclear information with your care team.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              color: Color(0xFF81798E),
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _CollapsibleOverview extends StatelessWidget {
@@ -334,8 +817,8 @@ class _CollapsibleConfirmationPanel extends StatelessWidget {
   }
 }
 
-class _DayHeader extends SliverPersistentHeaderDelegate {
-  _DayHeader({
+class _DaySelector extends StatelessWidget {
+  const _DaySelector({
     required this.plan,
     required this.selected,
     required this.onSelected,
@@ -346,19 +829,9 @@ class _DayHeader extends SliverPersistentHeaderDelegate {
   final ValueChanged<int> onSelected;
 
   @override
-  double get minExtent => 64;
-  @override
-  double get maxExtent => 64;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) => ColoredBox(
-    color: AppTheme.ink,
+  Widget build(BuildContext context) => SizedBox(
+    height: 48,
     child: ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       scrollDirection: Axis.horizontal,
       itemBuilder: (context, index) {
         final day = index + 1;
@@ -387,10 +860,6 @@ class _DayHeader extends SliverPersistentHeaderDelegate {
       itemCount: 7,
     ),
   );
-
-  @override
-  bool shouldRebuild(covariant _DayHeader old) =>
-      old.selected != selected || old.plan != plan;
 }
 
 class _DayTimeline extends StatelessWidget {
@@ -432,7 +901,9 @@ class _DayTimeline extends StatelessWidget {
           )
         else
           ...PlanTiming.values.map((timing) {
-            final timed = items.where((e) => e.timing == timing).toList();
+            final timed = items
+                .where((e) => e.effectiveTimings.contains(timing))
+                .toList();
             if (timed.isEmpty) return const SizedBox.shrink();
             return Padding(
               padding: const EdgeInsets.only(bottom: 16),
@@ -725,12 +1196,14 @@ class _EvidenceSection extends StatelessWidget {
     required this.icon,
     required this.notes,
     this.urgent = false,
+    this.initiallyExpanded = false,
   });
 
   final String title;
   final IconData icon;
   final List<EvidenceNote> notes;
   final bool urgent;
+  final bool initiallyExpanded;
 
   @override
   Widget build(BuildContext context) {
@@ -747,7 +1220,7 @@ class _EvidenceSection extends StatelessWidget {
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          initiallyExpanded: false,
+          initiallyExpanded: initiallyExpanded,
           tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           leading: Container(
@@ -1261,3 +1734,38 @@ String _suggestedTime(PlanTiming timing) => switch (timing) {
   PlanTiming.bedtime => '9:00 PM',
   PlanTiming.anytime => 'As needed',
 };
+
+String _nextActionDateLabel(DateTime when, {required bool includeTime}) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final date = DateTime(when.year, when.month, when.day);
+  final dayLabel = date == today
+      ? 'Today'
+      : date == today.add(const Duration(days: 1))
+      ? 'Tomorrow'
+      : '${_shortWeekday(when.weekday)}, ${when.day} ${_shortMonth(when.month)}';
+  final hour = when.hour > 12
+      ? when.hour - 12
+      : (when.hour == 0 ? 12 : when.hour);
+  final minute = when.minute.toString().padLeft(2, '0');
+  final period = when.hour >= 12 ? 'PM' : 'AM';
+  return includeTime ? '$dayLabel • $hour:$minute $period' : dayLabel;
+}
+
+String _shortWeekday(int weekday) =>
+    const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][weekday - 1];
+
+String _shortMonth(int month) => const [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+][month - 1];

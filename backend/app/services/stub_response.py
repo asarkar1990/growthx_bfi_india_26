@@ -1,19 +1,35 @@
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
+
+
+def _display_date(value: date) -> str:
+    return f"{value.strftime('%B')} {value.day}, {value.year}"
+
+
+_today = datetime.now(ZoneInfo("Asia/Kolkata")).date()
+_discharge_date = _today - timedelta(days=1)
+_admission_date = _discharge_date - timedelta(days=2)
+_follow_up_date = _discharge_date + timedelta(days=4)
+_follow_up_source_date = _follow_up_date.strftime("%d/%m/%Y")
+
+
 FALLBACK_PLAN = {
     "schemaVersion": "1.0",
     "documentType": "discharge_summary",
     "outputLanguage": "en",
     "patient": {
         "displayName": "Mr. Arindam Sarkar",
-        "dischargeDate": "2026-04-17",
+        "dischargeDate": _discharge_date.isoformat(),
         "hospital": "Aster WHITEFIELD HOSPITAL",
         "department": "DEPARTMENT OF INTERNAL MEDICINE",
         "primaryConditionAsWritten": "ACUTE DYSENTRY WITH MODERATE DEHYDRATION",
     },
     "overview": (
-        "The patient, Mr. Arindam Sarkar, a 35-year-old male, was admitted on April 15, 2026, "
+        "The patient, Mr. Arindam Sarkar, a 35-year-old male, was admitted on "
+        f"{_display_date(_admission_date)}, "
         "with acute dysentery and moderate dehydration. He received IV fluids, antibiotics, "
         "and supportive care, showing symptomatic improvement and stability. He is discharged on "
-        "April 17, 2026, with oral medications, dietary guidance, and a planned OPD follow-up."
+        f"{_display_date(_discharge_date)}, with oral medications, dietary guidance, and a planned OPD follow-up."
     ),
     "medications": [
         {
@@ -153,7 +169,7 @@ FALLBACK_PLAN = {
     ],
     "followUps": [
         {
-            "sourceEvidence": "In Internal Medicine OPD on Tuesday 21/04/2026 with CBC, CRP KFT and culture reports",
+            "sourceEvidence": f"In Internal Medicine OPD on {_follow_up_date.strftime('%A')} {_follow_up_source_date} with CBC, CRP KFT and culture reports",
             "page": 2,
             "confidence": "high",
             "status": "confirmed_from_source",
@@ -161,7 +177,7 @@ FALLBACK_PLAN = {
             "id": "followup-1",
             "type": "appointment",
             "title": "Internal Medicine OPD Follow-up",
-            "date": "2026-04-21",
+            "date": _follow_up_date.isoformat(),
             "relativeTiming": None,
             "locationOrDepartment": "Internal Medicine OPD",
             "preparation": "Bring CBC, CRP, KFT, and culture reports.",
@@ -176,7 +192,7 @@ FALLBACK_PLAN = {
             "type": "test",
             "title": "Collect culture reports",
             "date": None,
-            "relativeTiming": "On or before follow-up appointment on 21/04/2026",
+            "relativeTiming": f"On or before follow-up appointment on {_follow_up_source_date}",
             "locationOrDepartment": None,
             "preparation": None,
         },
@@ -189,7 +205,7 @@ FALLBACK_PLAN = {
             "id": "followup-3",
             "type": "test",
             "title": "CBC, KFT, and CRP blood tests",
-            "date": "2026-04-21",
+            "date": _follow_up_date.isoformat(),
             "relativeTiming": "On follow up",
             "locationOrDepartment": None,
             "preparation": None,

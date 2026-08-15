@@ -29,18 +29,25 @@ class PlanItem extends Equatable {
     required this.days,
     required this.evidence,
     required this.status,
+    this.timings = const [],
+    this.isMedication = true,
     this.detail,
     this.uncertaintyReason,
   });
   final String id, title, instruction, evidence;
   final String? detail, uncertaintyReason;
   final PlanTiming timing;
+  final List<PlanTiming> timings;
+  final bool isMedication;
   final List<int> days;
   final ItemStatus status;
   bool get reminderEligible =>
+      isMedication &&
       status == ItemStatus.confirmedFromSource &&
       timing != PlanTiming.anytime &&
       days.isNotEmpty;
+
+  List<PlanTiming> get effectiveTimings => timings.isEmpty ? [timing] : timings;
 
   factory PlanItem.fromJson(
     Map<String, dynamic> json, {
@@ -54,16 +61,24 @@ class PlanItem extends Equatable {
     if (days.any((day) => day < 1 || day > 7)) {
       throw const FormatException('Plan day must be 1–7');
     }
-    final rawTiming = medication
-        ? (json['timing'] as List).first as String
-        : json['timing'] as String;
+    final parsedTimings = medication
+        ? (json['timing'] as List)
+              .cast<String>()
+              .map(parseTiming)
+              .toList(growable: false)
+        : [parseTiming(json['timing'] as String)];
+    if (parsedTimings.isEmpty) {
+      throw const FormatException('Medication timing is required');
+    }
     return PlanItem(
       id: json['id'] as String,
       title: medication
           ? json['name'] as String
           : _categoryLabel(json['category'] as String),
       instruction: json['simplifiedInstruction'] as String,
-      timing: parseTiming(rawTiming),
+      timing: parsedTimings.first,
+      timings: parsedTimings,
+      isMedication: medication,
       days: days,
       evidence: evidence,
       status: parseStatus(json['status'] as String),
@@ -90,6 +105,8 @@ class PlanItem extends Equatable {
     title,
     instruction,
     timing,
+    timings,
+    isMedication,
     days,
     evidence,
     status,
@@ -116,11 +133,57 @@ class EvidenceNote extends Equatable {
     required this.subtitle,
     required this.evidence,
     required this.status,
+    this.type,
+    this.date,
+    this.location,
+    this.preparation,
   });
   final String title, subtitle, evidence;
   final ItemStatus status;
+  final String? type, date, location, preparation;
   @override
-  List<Object?> get props => [title, subtitle, evidence, status];
+  List<Object?> get props => [
+    title,
+    subtitle,
+    evidence,
+    status,
+    type,
+    date,
+    location,
+    preparation,
+  ];
+}
+
+enum NextActionType { medication, hospitalVisit }
+
+class NextAction extends Equatable {
+  const NextAction.medication({
+    required this.when,
+    required this.title,
+    required this.subtitle,
+    required this.timing,
+    required this.item,
+  }) : type = NextActionType.medication,
+       note = null;
+
+  const NextAction.hospitalVisit({
+    required this.when,
+    required this.title,
+    required this.subtitle,
+    required this.note,
+  }) : type = NextActionType.hospitalVisit,
+       timing = null,
+       item = null;
+
+  final NextActionType type;
+  final DateTime when;
+  final String title, subtitle;
+  final PlanTiming? timing;
+  final PlanItem? item;
+  final EvidenceNote? note;
+
+  @override
+  List<Object?> get props => [type, when, title, subtitle, timing, item, note];
 }
 
 class DischargePlan extends Equatable {
@@ -219,6 +282,72 @@ class DischargePlan extends Equatable {
     return '$w, ${dt.day} $m • Day $day Routine';
   }
 
+  List<NextAction> nextActions(DateTime now, {int limit = 5}) {
+    final candidates = <NextAction>[];
+
+    for (final item in items) {
+      if (!item.isMedication || item.status != ItemStatus.confirmedFromSource) {
+        continue;
+      }
+      for (final day in item.days) {
+        final date = dateForDay(day);
+        for (final timing in item.effectiveTimings) {
+          final hour = switch (timing) {
+            PlanTiming.morning => 8,
+            PlanTiming.afternoon => 13,
+            PlanTiming.evening => 18,
+            PlanTiming.bedtime => 21,
+            PlanTiming.anytime => null,
+          };
+          if (hour == null) continue;
+          final when = DateTime(date.year, date.month, date.day, hour);
+          if (!when.isBefore(now)) {
+            candidates.add(
+              NextAction.medication(
+                when: when,
+                title: item.title,
+                subtitle: item.instruction,
+                timing: timing,
+                item: item,
+              ),
+            );
+          }
+        }
+      }
+    }
+
+    for (final followUp in followUps) {
+      if (followUp.type != 'appointment' ||
+          followUp.status != ItemStatus.confirmedFromSource ||
+          followUp.date == null) {
+        continue;
+      }
+      final parsed = DateTime.tryParse(followUp.date!);
+      if (parsed == null) continue;
+      final when = DateTime(parsed.year, parsed.month, parsed.day);
+      final today = DateTime(now.year, now.month, now.day);
+      if (!when.isBefore(today)) {
+        candidates.add(
+          NextAction.hospitalVisit(
+            when: when,
+            title: followUp.title,
+            subtitle: followUp.location ?? hospital,
+            note: followUp,
+          ),
+        );
+      }
+    }
+
+    candidates.sort((a, b) => a.when.compareTo(b.when));
+    if (limit <= 0) return const [];
+    return List.unmodifiable(candidates.take(limit));
+  }
+
+  NextAction? nextAction(DateTime now) {
+    final actions = nextActions(now, limit: 1);
+    return actions.isEmpty ? null : actions.first;
+  }
+
   factory DischargePlan.fromJson(Map<String, dynamic> json) {
     if (json['schemaVersion'] != '1.0' ||
         !['en', 'bn', 'hi', 'kn'].contains(json['outputLanguage'])) {
@@ -239,6 +368,10 @@ class DischargePlan extends Equatable {
         subtitle: subtitle,
         evidence: evidence,
         status: parseStatus(value['status'] as String),
+        type: value['type'] as String?,
+        date: value['date'] as String?,
+        location: value['locationOrDepartment'] as String?,
+        preparation: value['preparation'] as String?,
       );
     }
 
