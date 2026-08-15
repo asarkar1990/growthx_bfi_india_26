@@ -1,7 +1,10 @@
 import asyncio
+import logging
 import os
+from pathlib import Path
 from typing import Callable, Literal
 
+from dotenv import find_dotenv, load_dotenv
 from google import genai
 from google.genai import types
 from pydantic import ValidationError
@@ -9,9 +12,23 @@ from pydantic import ValidationError
 from app.models import DischargePlan
 from app.services.extraction_prompt import SYSTEM_INSTRUCTION, extraction_prompt
 
-MODEL = "gemini-3.6-flash"
-SDK_TIMEOUT_MS = 25_000
-ENDPOINT_TIMEOUT_SECONDS = 30
+logger = logging.getLogger("carepath.gemini")
+
+def _load_env():
+    for env_path in [
+        Path(__file__).resolve().parents[1] / ".env",
+        Path(__file__).resolve().parents[2] / ".env",
+        find_dotenv(usecwd=True),
+    ]:
+        if env_path and Path(env_path).exists():
+            load_dotenv(env_path)
+
+_load_env()
+
+MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
+SDK_TIMEOUT_MS = int(os.getenv("GEMINI_SDK_TIMEOUT_MS", "60000"))
+ENDPOINT_TIMEOUT_SECONDS = int(os.getenv("GEMINI_ENDPOINT_TIMEOUT_SECONDS", "130"))
+
 
 
 def _gemini_response_schema() -> dict:
@@ -55,14 +72,35 @@ def _validation_summary(error: ValidationError) -> str:
     )
 
 
+import re
+
+def _clean_json_text(text: str | None) -> str:
+    if not text:
+        return "{}"
+    clean = text.strip()
+    if clean.startswith("```"):
+        lines = clean.splitlines()
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        clean = "\n".join(lines).strip()
+    if "```" in clean:
+        match = re.search(r"```(?:json)?(.*?)```", clean, re.DOTALL)
+        if match:
+            clean = match.group(1).strip()
+    return clean
+
 def _extract_plan(
     file_bytes: bytes,
     mime_type: str,
     language: Literal["en", "bn", "hi"],
     client_factory: Callable[..., genai.Client] = genai.Client,
 ) -> DischargePlan:
+    _load_env()
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
+        logger.error("GEMINI_API_KEY is not configured in environment or .env")
         raise GeminiUnavailableError("Gemini API key is not configured")
 
     client = client_factory(api_key=api_key)
@@ -84,13 +122,21 @@ def _extract_plan(
             )
             response_text = response.text
         except Exception as error:
+            logger.warning("Gemini API generate_content attempt %d failed: %s", attempt + 1, error)
+            if attempt == 0:
+                continue
             raise GeminiUnavailableError("Gemini request failed") from error
 
+        cleaned_text = _clean_json_text(response_text)
         try:
-            plan = DischargePlan.model_validate_json(response_text)
-        except (ValidationError, TypeError, ValueError) as error:
-            if attempt == 0 and isinstance(error, ValidationError):
-                repair_errors = _validation_summary(error)
+            plan = DischargePlan.model_validate_json(cleaned_text)
+        except Exception as error:
+            logger.warning("DischargePlan validation error on attempt %d: %s\nRaw output:\n%s", attempt + 1, error, response_text)
+            if attempt == 0:
+                if isinstance(error, ValidationError):
+                    repair_errors = _validation_summary(error)
+                else:
+                    repair_errors = str(error)
                 continue
             raise InvalidModelResponseError("Gemini returned an invalid plan") from error
 

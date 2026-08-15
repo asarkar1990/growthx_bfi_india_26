@@ -3,12 +3,12 @@ from datetime import date as Date
 from enum import Enum
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 Day = Annotated[int, Field(ge=1, le=7)]
 
 class StrictModel(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
 class Confidence(str, Enum):
     high = "high"
@@ -26,6 +26,29 @@ class Evidence(StrictModel):
     confidence: Confidence
     status: ItemStatus
     uncertaintyReason: str | None = None
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def normalize_status(cls, value: str | ItemStatus) -> str | ItemStatus:
+        if isinstance(value, str):
+            val = value.lower().strip()
+            if val in {"confirmed", "confirmed_from_source"}:
+                return ItemStatus.confirmed
+            if val == "needs_confirmation":
+                return ItemStatus.needs_confirmation
+            if val == "conflict":
+                return ItemStatus.conflict
+        return value
+
+    @model_validator(mode="before")
+    @classmethod
+    def ensure_uncertainty_reason(cls, data):
+        if isinstance(data, dict):
+            status = data.get("status")
+            if status in {"needs_confirmation", "conflict", ItemStatus.needs_confirmation, ItemStatus.conflict}:
+                if not data.get("uncertaintyReason"):
+                    data["uncertaintyReason"] = "Information requires confirmation with care team."
+        return data
 
     @model_validator(mode="after")
     def uncertainty_is_explained(self):
@@ -45,6 +68,13 @@ class Medication(Evidence):
     simplifiedInstruction: str = Field(min_length=1)
     applicableDays: list[Day]
 
+    @field_validator("timing", mode="before")
+    @classmethod
+    def normalize_medication_timing(cls, value):
+        if isinstance(value, str):
+            return [value]
+        return value
+
 class CareInstruction(Evidence):
     id: str = Field(min_length=1)
     category: Literal["diet", "activity", "wound_care", "equipment", "other"]
@@ -52,6 +82,13 @@ class CareInstruction(Evidence):
     simplifiedInstruction: str = Field(min_length=1)
     timing: Literal["morning", "afternoon", "evening", "bedtime", "anytime"]
     applicableDays: list[Day]
+
+    @field_validator("timing", mode="before")
+    @classmethod
+    def normalize_care_instruction_timing(cls, value):
+        if isinstance(value, list) and len(value) > 0:
+            return value[0]
+        return value
 
 class FollowUp(Evidence):
     id: str = Field(min_length=1)
@@ -61,6 +98,13 @@ class FollowUp(Evidence):
     relativeTiming: str | None = None
     locationOrDepartment: str | None = None
     preparation: str | None = None
+
+    @field_validator("date", mode="before")
+    @classmethod
+    def parse_followup_date(cls, value):
+        if not value or str(value).strip().lower() in {"null", "none", "n/a", ""}:
+            return None
+        return value
 
 class WarningSign(Evidence):
     id: str = Field(min_length=1)
@@ -81,6 +125,13 @@ class Patient(StrictModel):
     department: str | None = None
     primaryConditionAsWritten: str | None = None
 
+    @field_validator("dischargeDate", mode="before")
+    @classmethod
+    def parse_discharge_date(cls, value):
+        if not value or str(value).strip().lower() in {"null", "none", "n/a", ""}:
+            return None
+        return value
+
 class DischargePlan(StrictModel):
     schemaVersion: Literal["1.0"] = "1.0"
     documentType: Literal["discharge_summary", "unsupported", "uncertain"]
@@ -93,3 +144,4 @@ class DischargePlan(StrictModel):
     warningSigns: list[WarningSign]
     confirmationIssues: list[ConfirmationIssue]
     extractionWarnings: list[str]
+

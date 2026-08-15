@@ -40,55 +40,272 @@ class PageShell extends StatelessWidget {
 
 class Brand extends StatelessWidget {
   const Brand({super.key});
+
+  void _showServerSettings(BuildContext context) {
+    final cubit = context.read<CarePlanCubit>();
+    final controller = TextEditingController(text: cubit.state.apiBaseUrl);
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF1B162B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) => BlocProvider.value(
+        value: cubit,
+        child: BlocBuilder<CarePlanCubit, CarePlanState>(
+          builder: (ctx, state) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 24,
+                bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2A1B4B),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.dns_rounded,
+                          color: AppTheme.lavender,
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Backend API Configuration',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                        onPressed: () => Navigator.of(sheetContext).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Set the FastAPI root URL (e.g. your laptop’s local server).',
+                    style: TextStyle(fontSize: 13, color: Color(0xFFB9B1C8)),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: controller,
+                    decoration: InputDecoration(
+                      labelText: 'API Root URL',
+                      hintText: 'http://127.0.0.1:8000',
+                      prefixIcon: const Icon(Icons.link_rounded),
+                      filled: true,
+                      fillColor: const Color(0xFF13101E),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: Color(0xFF33294E)),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: AppTheme.lavender),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ActionChip(
+                        label: const Text('127.0.0.1:8000 (Laptop)'),
+                        onPressed: () {
+                          controller.text = 'http://127.0.0.1:8000';
+                          cubit.setApiBaseUrl('http://127.0.0.1:8000');
+                        },
+                      ),
+                      ActionChip(
+                        label: const Text('10.0.2.2:8000 (Android)'),
+                        onPressed: () {
+                          controller.text = 'http://10.0.2.2:8000';
+                          cubit.setApiBaseUrl('http://10.0.2.2:8000');
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  if (state.backendConnected != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: state.backendConnected!
+                            ? const Color(0xFF10281E)
+                            : const Color(0xFF2C1418),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: state.backendConnected!
+                              ? const Color(0xFF225B40)
+                              : const Color(0xFF6B262F),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            state.backendConnected!
+                                ? Icons.check_circle_rounded
+                                : Icons.error_outline_rounded,
+                            size: 18,
+                            color: state.backendConnected!
+                                ? Colors.greenAccent
+                                : Colors.redAccent,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              state.backendConnected!
+                                  ? 'Connected! Backend is healthy at ${state.apiBaseUrl}'
+                                  : 'Could not reach backend at ${state.apiBaseUrl}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: state.backendConnected!
+                                    ? Colors.greenAccent
+                                    : Colors.redAccent,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          cubit.setApiBaseUrl(controller.text);
+                          cubit.checkBackendHealth();
+                        },
+                        icon: const Icon(Icons.sync_rounded, size: 18),
+                        label: const Text('Test Connection'),
+                      ),
+                      const Spacer(),
+                      FilledButton(
+                        onPressed: () {
+                          cubit.setApiBaseUrl(controller.text);
+                          Navigator.of(sheetContext).pop();
+                        },
+                        child: const Text('Save & Close'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: AppTheme.violet,
-          borderRadius: BorderRadius.circular(12),
+  Widget build(BuildContext context) {
+    final state = context.watch<CarePlanCubit>().state;
+    return Row(
+      children: [
+        Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: AppTheme.violet,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(Icons.route_rounded, color: Colors.white),
         ),
-        child: const Icon(Icons.route_rounded, color: Colors.white),
-      ),
-      const SizedBox(width: 12),
-      const Expanded(
-        child: Text(
-          'CarePath',
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-        ),
-      ),
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: AppTheme.surfaceHigh,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: const Text(
-          'INDIA • DEMO',
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-            color: AppTheme.lavender,
+        const SizedBox(width: 12),
+        const Expanded(
+          child: Text(
+            'CarePath',
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
           ),
         ),
-      ),
-    ],
-  );
+        InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => _showServerSettings(context),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceHigh,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: state.backendConnected == true
+                    ? Colors.green.withValues(alpha: 0.5)
+                    : const Color(0xFF3B3054),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: state.backendConnected == true
+                        ? Colors.greenAccent
+                        : state.backendConnected == false
+                        ? Colors.redAccent
+                        : AppTheme.lavender,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const Text(
+                  'API',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.lavender,
+                  ),
+                ),
+                const SizedBox(width: 2),
+                const Icon(
+                  Icons.settings_outlined,
+                  size: 13,
+                  color: AppTheme.lavender,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class UploadView extends StatelessWidget {
   const UploadView({super.key});
+
   Future<void> _pick(BuildContext context) async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: const ['pdf', 'png', 'jpg', 'jpeg'],
-      withData: false,
+      withData: true,
     );
     if (result != null && context.mounted) {
-      context.read<CarePlanCubit>().selectFile(result.files.single.name);
+      final file = result.files.single;
+      context.read<CarePlanCubit>().selectFile(file.name, bytes: file.bytes);
     }
   }
 

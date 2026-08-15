@@ -1,4 +1,4 @@
-package `in`.carepath.carepath_india
+package com.carepath.carepath_india
 
 import io.flutter.embedding.android.FlutterActivity
 
